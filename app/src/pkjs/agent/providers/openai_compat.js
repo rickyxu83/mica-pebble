@@ -1,4 +1,7 @@
 /**
+ * Copyright 2026 Mica contributors.
+ * Licensed under the Apache License, Version 2.0.
+ *
  * OpenAI-compatible provider (/v1/chat/completions).
  *
  * Works with OpenAI itself and any compatible endpoint:
@@ -193,7 +196,7 @@ function parseError(status, responseText, model) {
 exports.generate = function(input, options, callback) {
     var apiKey = config.getOpenaiApiKey();
     if (!apiKey) {
-        callback(new Error('API key is not configured. Open Wrist settings and add your provider API key.'));
+        callback(new Error('API key is not configured. Open Mica settings and add your provider API key.'));
         return;
     }
     options = options || {};

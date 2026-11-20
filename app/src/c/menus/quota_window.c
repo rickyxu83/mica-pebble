@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,11 +130,11 @@ static void prv_app_message_received(DictionaryIterator* iter, void* context) {
     strncpy(data->explanation, text_tuple->value->cstring, sizeof(data->explanation));
     data->explanation[sizeof(data->explanation) - 1] = '\0';
   } else if (used == 0 && remaining == 0) {
-    strncpy(data->explanation, "Wrist has no subscription. Add your AI provider API key in the Wrist settings on your phone.", sizeof(data->explanation));
+    strncpy(data->explanation, "Mica has no subscription. Add your AI provider API key in the Mica settings on your phone.", sizeof(data->explanation));
   } else {
     int display_percent = (int)(((uint64_t)used * 100) / (used + remaining));
     percentage = ((uint64_t)used * PERCENTAGE_MAX) / (used + remaining);
-    snprintf(data->explanation, sizeof(data->explanation), "You've used %d%% of your Wrist monthly budget estimate. The estimate is informational only; your provider bills actual usage.", display_percent);
+    snprintf(data->explanation, sizeof(data->explanation), "You've used %d%% of your Mica monthly budget estimate. The estimate is informational only; your provider bills actual usage.", display_percent);
   }
   text_layer_set_text(data->explanation_layer, data->explanation);
   GSize text_size = text_layer_get_content_size(data->explanation_layer);

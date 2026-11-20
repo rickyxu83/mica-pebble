@@ -1,5 +1,6 @@
 /*
 * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +39,7 @@ static inline int prv_get_image_id(MapWidgetData *data) {
 MapWidget* map_widget_create(GRect rect, ConversationEntry* entry) {
   int image_id = conversation_entry_get_widget(entry)->widget.map.image_id;
   GSize image_size = image_manager_get_size(image_id);
-  Layer *layer = blayer_create_with_data(GRect(rect.origin.x, rect.origin.y, rect.size.w, image_size.h + 2), sizeof(MapWidgetData));
+  Layer *layer = blayer_create_with_data(GRect(rect.origin.x, rect.origin.y, rect.size.w, image_size.h + 18), sizeof(MapWidgetData));
   MapWidgetData* data = layer_get_data(layer);
   data->entry = entry;
   data->bitmap = NULL;
@@ -113,6 +114,10 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_draw_line(ctx, GPoint(image_rect.origin.x, 0), GPoint(image_rect.origin.x + image_rect.size.w, 0));
   graphics_draw_line(ctx, GPoint(image_rect.origin.x, bounds.size.h - 1), GPoint(image_rect.origin.x + image_rect.size.w, bounds.size.h - 1));
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx, "© OpenStreetMap contributors", fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                     GRect(2, image_size.h + 2, bounds.size.w - 4, 15),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   if (data->bitmap) {
     GRect bitmap_bounds = gbitmap_get_bounds(data->bitmap);
     GRect draw_rect = GRect(

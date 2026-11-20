@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,7 +102,7 @@ function metadataMarkdown(request) {
 function githubIssueUrl(request, kind) {
     var base = config.getGithubIssuesUrl();
     var separator = base.indexOf('?') === -1 ? '?' : '&';
-    var title = kind === 'report' ? 'Billy conversation report' : 'Billy feedback';
+    var title = kind === 'report' ? 'Mica conversation report' : 'Mica feedback';
     var body = '## ' + (kind === 'report' ? 'Report' : 'Feedback') + '\n\n' +
         (request.text || 'Describe the issue here.') + '\n\n';
     if (request.thread_uuid) {

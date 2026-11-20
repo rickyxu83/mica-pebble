@@ -1,4 +1,5 @@
 # Copyright 2025 Google LLC
+# Modified in 2026 for Mica.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +17,7 @@
 # Use the standard pebble tooling to build.
 cmake_minimum_required(VERSION 3.26)
 set(CMAKE_SYSTEM_NAME Generic)
-project(tiny_assistant_app)
+project(mica_app)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_INCLUDE_SYSTEM_DIRECTORIES FALSE)
@@ -37,7 +38,7 @@ include_directories(node_modules/pebble-events/dist/include)
 include_directories(node_modules/@smallstoneapps/linked-list/dist/include)
 
 # Y'know, all the files.
-add_executable(tiny_assistant_app
+add_executable(mica_app
         src/c/alarms/alarm_window.c
         src/c/alarms/manager.c
         src/c/converse/conversation.c

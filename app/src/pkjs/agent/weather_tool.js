@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7,6 +8,7 @@
 
 var config = require('../config');
 var location = require('../location');
+var nominatim = require('../lib/nominatim');
 
 var WEATHER_CONDITION_LIGHT_RAIN = 1;
 var WEATHER_CONDITION_HEAVY_RAIN = 2;
@@ -124,12 +126,12 @@ function resolveWeatherLocation(args, callback) {
         return;
     }
     if (!config.isLocationEnabled()) {
-        callback(new Error('Location is disabled in Billy settings.'));
+        callback(new Error('Location is disabled in Mica settings.'));
         return;
     }
     if (!location.isReady()) {
         location.update();
-        callback(new Error('Local weather needs a recent phone location. Open Billy once or check location permission.'));
+        callback(new Error('Local weather needs a recent phone location. Open Mica once or check location permission.'));
         return;
     }
     var pos = location.getPos();
@@ -141,8 +143,7 @@ function resolveWeatherLocation(args, callback) {
 }
 
 function geocode(name, callback) {
-    var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(name);
-    fetchJson(url, function(err, results) {
+    nominatim.search(name, function(err, results) {
         if (err) {
             callback(new Error('Location lookup failed: ' + err.message));
             return;

@@ -1,12 +1,19 @@
-# Billy
+# Mica
 ## Version %d.%d
-A local Gemini assistant for Pebble.
-Uses your Gemini API key. No Billy helper service.
+Your AI. Your keys. Your wrist.
+A multi-provider AI assistant for Pebble.
+Uses your own API keys. No Mica helper service or subscription.
 Android enhanced mode is optional when available.
+
+## Mica
+Based on Billy by Thomas Bolger and Bobby / Tiny Assistant by the Rebble and Pebble community. Modified for Mica with multi-provider support and custom OpenAI-compatible endpoints.
 
 ## Programming
 Thomas Bolger
 Katharine Berry
+Mica contributors
 ## Iconography
 Sarah Bolger
 Stasia Michalska <lcp.world>
+## Font
+AmberW — GOTHIC_36 and GOTHIC_36_BOLD, SIL Open Font License 1.1.

@@ -1,0 +1,29 @@
+Mica
+Copyright 2026 Mica contributors
+
+Mica is a modified fork of Billy by Thomas Bolger, which is based on Bobby /
+Tiny Assistant by the Rebble and Pebble developer community.
+
+Upstream projects:
+- Billy: https://github.com/TomBolger/Billy (Apache License 2.0)
+- Bobby / Tiny Assistant: https://github.com/pebble-dev/bobby-assistant
+  (Apache License 2.0)
+- pebble-ai-companion: https://github.com/Toyontaker/pebble-ai-companion
+  (MIT License; used as an implementation reference)
+
+Original copyright and license notices are retained in the corresponding source
+files. Files modified for Mica include prominent modification notices. The main
+changes are the Mica rebrand, multi-provider abstraction, OpenAI-compatible and
+Anthropic providers, BYOA configuration, current SDK permission declarations,
+and build fixes.
+
+Artwork and iconography credits from Billy are retained: Sarah Bolger,
+Katharine Berry, and Stasia Michalska <lcp.world>. GOTHIC_36 and
+GOTHIC_36_BOLD are Copyright (c) 2026 AmberW and licensed under SIL OFL 1.1.
+
+Mica is not an official Google, Pebble, Core Devices, or Rebble product.
+Pebble, Rebble, Google, and other names are used only to identify compatibility
+or the origin of upstream works; no endorsement is implied.
+
+See LICENSE and THIRD_PARTY_NOTICES.md. Full license texts are also embedded
+as raw resources in the PBW under text/licenses/.

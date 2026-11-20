@@ -55,7 +55,7 @@ server.listen(0, '127.0.0.1', () => {
 
     provider.generate(
         [{type: 'user_input', content: [{type: 'text', text: '苏州天气'}]}],
-        {systemInstruction: 'You are Wrist.', tools, enableSearchGrounding: false},
+        {systemInstruction: 'You are Mica.', tools, enableSearchGrounding: false},
         (err, r1) => {
             if (err) { console.error('FAIL turn1:', err.message); process.exit(1); }
             console.assert(r1.functionCalls.length === 1, 'expected 1 tool call');
@@ -69,7 +69,7 @@ server.listen(0, '127.0.0.1', () => {
             history.push({type: 'function_result', name: 'get_weather', call_id: 'call_1',
                 result: [{type: 'text', text: JSON.stringify({temp_c: 18, condition: 'sunny'})}]});
 
-            provider.generate(history, {systemInstruction: 'You are Wrist.', tools}, (err2, r2) => {
+            provider.generate(history, {systemInstruction: 'You are Mica.', tools}, (err2, r2) => {
                 if (err2) { console.error('FAIL turn2:', err2.message); process.exit(1); }
                 console.assert(r2.text.includes('18'), 'final text');
                 const second = requests[1].body;

@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +93,7 @@ static void prv_show_empty(Window *window) {
     text_layer_set_background_color(data->empty_text_layer, GColorClear);
     text_layer_set_font(data->empty_text_layer, fonts->title_font);
     text_layer_set_text_alignment(data->empty_text_layer, GTextAlignmentCenter);
-    text_layer_set_text(data->empty_text_layer, "No reminders.\nAsk Wrist to set some.");
+    text_layer_set_text(data->empty_text_layer, "No reminders.\nAsk Mica to set some.");
   }
 
   // Create sleeping horse if not exists

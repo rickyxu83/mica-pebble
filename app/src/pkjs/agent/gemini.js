@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -439,7 +440,7 @@ function generateInteractionsWithInput(apiKey, model, interactionInput, options,
 exports.generate = function(input, options, callback) {
     var apiKey = config.getGeminiApiKey();
     if (!apiKey) {
-        callback(new Error('Gemini API key is not configured. Open Billy settings and add a Gemini API key.'));
+        callback(new Error('Gemini API key is not configured. Open Mica settings and add a Gemini API key.'));
         return;
     }
 
@@ -579,7 +580,7 @@ function parseError(status, responseText, model) {
     message = message || 'unknown error';
     var lowerMessage = message.toLowerCase();
     if (status === 403 && lowerMessage.indexOf('generativelanguage.googleapis.com') !== -1 && lowerMessage.indexOf('blocked') !== -1) {
-        message = 'Gemini API key is blocked. Enable the Gemini API and allow generativelanguage.googleapis.com. For companionless mode, do not restrict the key to Billy Companion package/SHA.';
+        message = 'Gemini API key is blocked. Enable the Gemini API and allow generativelanguage.googleapis.com. For companionless mode, do not restrict the key to the upstream Billy Companion package/SHA.';
     }
     if ((status === 401 || status === 403) && lowerMessage.indexOf('invalid authentication credentials') !== -1) {
         message = 'Gemini did not accept this value as an API key. Use a Gemini API key from Google AI Studio, not an OAuth client ID, client secret, or access token.';

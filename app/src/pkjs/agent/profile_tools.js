@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,13 +67,13 @@ exports.getDeclarations = function() {
         {
             type: 'function',
             name: 'get_billy_user_profile',
-            description: 'Read Billy companionless local profile/memory notes. Use when the user asks what Billy knows or remembers about them.',
+            description: 'Read Mica companionless local profile/memory notes. Use when the user asks what Mica knows or remembers about them.',
             parameters: schema({}, [])
         },
         {
             type: 'function',
             name: 'remember_billy_user_fact',
-            description: 'Store a durable Billy memory only when the user explicitly asks Billy to remember/save a personal fact or clearly corrects durable profile information.',
+            description: 'Store a durable Mica memory only when the user explicitly asks Mica to remember/save a personal fact or clearly corrects durable profile information.',
             parameters: schema({
                 fact: stringSchema('Short durable personal fact or preference to remember.')
             }, ['fact'])
@@ -80,7 +81,7 @@ exports.getDeclarations = function() {
         {
             type: 'function',
             name: 'forget_billy_user_fact',
-            description: 'Remove Billy companionless local profile/memory notes matching the user request.',
+            description: 'Remove Mica companionless local profile/memory notes matching the user request.',
             parameters: schema({
                 query: stringSchema('Memory text, person, preference, or topic to forget.')
             }, ['query'])
@@ -106,7 +107,7 @@ exports.execute = function(session, call, callback) {
         callback({
             status: 'ok',
             profile_context: current,
-            summary: current ? 'Billy has local profile notes.' : 'Billy has no local profile notes yet.'
+            summary: current ? 'Mica has local profile notes.' : 'Mica has no local profile notes yet.'
         });
         return true;
     }
@@ -138,7 +139,7 @@ exports.execute = function(session, call, callback) {
         saveMemories(after);
         callback({
             status: before.length === after.length ? 'not_found' : 'ok',
-            summary: before.length === after.length ? 'I did not find a matching Billy memory.' : 'Forgot ' + (before.length - after.length) + ' Billy memory.',
+            summary: before.length === after.length ? 'I did not find a matching Mica memory.' : 'Forgot ' + (before.length - after.length) + ' Mica memory.',
             removed_count: before.length - after.length
         });
         return true;

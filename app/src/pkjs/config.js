@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,11 +96,21 @@ exports.getGeminiMonthlyBudgetUsd = function() {
 }
 
 exports.getGithubIssuesUrl = function() {
-    return exports.getSetting('GITHUB_ISSUES_URL', 'https://github.com/tombolger/Billy/issues/new');
+    return exports.getSetting('GITHUB_ISSUES_URL', '');
 }
 
 exports.getFeedbackPostUrl = function() {
     return String(exports.getSetting('FEEDBACK_POST_URL', '') || '').replace(/^\s+|\s+$/g, '');
+}
+
+exports.getNominatimBaseUrl = function() {
+    var value = String(exports.getSetting('NOMINATIM_BASE_URL', '') || '').replace(/\s+$/g, '').replace(/\/+$/g, '');
+    return value || 'https://nominatim.openstreetmap.org';
+}
+
+exports.getStaticMapBaseUrl = function() {
+    var value = String(exports.getSetting('STATIC_MAP_BASE_URL', '') || '').replace(/\s+$/g, '').replace(/\/+$/g, '');
+    return value || 'https://staticmap.openstreetmap.de/staticmap.php';
 }
 
 exports.getUserProfileContext = function() {

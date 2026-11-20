@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +138,7 @@ exports.getDeclarations = function() {
         {
             type: 'function',
             name: 'update_settings',
-            description: 'Change Billy watch settings such as units, response language, vibration pattern, quick launch behavior, or prompt confirmation.',
+            description: 'Change Mica watch settings such as units, response language, vibration pattern, quick launch behavior, or prompt confirmation.',
             parameters: schema({
                 unitSystem: nullableString("Optional. One of: 'imperial', 'metric', 'uk hybrid', 'both', or 'auto'."),
                 responseLanguage: nullableString("Optional. Use a supported language code such as 'en_US', 'de_DE', 'fr_FR', or 'auto'."),

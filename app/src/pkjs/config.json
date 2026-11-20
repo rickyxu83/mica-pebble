@@ -1,7 +1,7 @@
 [
   {
     "type": "heading",
-    "defaultValue": "Wrist",
+    "defaultValue": "Mica",
     "size": 1
   },
   {
@@ -116,7 +116,7 @@
         "id": "GEMINI_MONTHLY_BUDGET_USD",
         "messageKey": "GEMINI_MONTHLY_BUDGET_USD",
         "label": "Gemini monthly budget",
-        "description": "Used only for Billy's local estimate on the Quota screen. Google AI Studio billing is authoritative.",
+        "description": "Used only for Mica's local estimate on the Quota screen. Google AI Studio billing is authoritative.",
         "defaultValue": "10"
       },
       {
@@ -137,10 +137,24 @@
       },
       {
         "type": "input",
+        "id": "NOMINATIM_BASE_URL",
+        "label": "Geocoding service base URL (advanced)",
+        "description": "Leave blank for the public OpenStreetMap Nominatim service. Set a compatible alternative to change providers without an app update. Public-service rate limits and attribution requirements apply.",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
+        "id": "STATIC_MAP_BASE_URL",
+        "label": "Static map service URL (advanced)",
+        "description": "Leave blank for staticmap.openstreetmap.de. Set a compatible staticmap.php endpoint if your map provider changes.",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
         "id": "USER_PROFILE_CONTEXT",
         "messageKey": "USER_PROFILE_CONTEXT",
         "label": "Assistant profile context",
-        "description": "Optional companionless memory/profile notes Wrist should use, such as preferred name, home timezone, family names, pets, or preferences. Stored locally by the Pebble phone app.",
+        "description": "Optional companionless memory/profile notes Mica should use, such as preferred name, home timezone, family names, pets, or preferences. Stored locally by the Pebble phone app.",
         "defaultValue": ""
       }
     ]
@@ -157,7 +171,7 @@
         "id": "languageCode",
         "messageKey": "LANGUAGE_CODE",
         "label": "Response language",
-        "description": "Controls the language of Billy's replies. Does not currently translate the rest of the UI. If 'automatic', Billy will attempt to respond in the same language the question was asked.",
+        "description": "Controls the language of Mica's replies. Does not currently translate the rest of the UI. If 'automatic', Mica will attempt to respond in the same language the question was asked.",
         "defaultValue": "",
         "options": [
           {
@@ -385,7 +399,7 @@
         "type": "select",
         "messageKey": "QUICK_LAUNCH_BEHAVIOUR",
         "label": "Quick launch behaviour",
-        "description": "What to do when Billy is launched via Quick Launch. If 'start conversation' is selected, Billy will start listening immediately. If 'stay open' is chosen, Billy will quit after a minute of inactivity. If 'open home screen' is chosen, Billy will behave the same as if launched from the app launcher.",
+        "description": "What to do when Mica is launched via Quick Launch. If 'start conversation' is selected, Mica will start listening immediately. If 'stay open' is chosen, Mica will quit after a minute of inactivity. If 'open home screen' is chosen, Mica will behave the same as if launched from the app launcher.",
         "defaultValue": "1",
         "options": [
           {
@@ -407,7 +421,7 @@
         "messageKey": "CONFIRM_TRANSCRIPTS",
         "defaultValue": false,
         "label": "Confirm prompts before responding",
-        "description": "When enabled, after dictating to the watch, you'll always be asked to confirm your input before Billy takes action. When disabled, Billy will respond immediately to whatever was recognised."
+        "description": "When enabled, after dictating to the watch, you'll always be asked to confirm your input before Mica takes action. When disabled, Mica will respond immediately to whatever was recognised."
       }
     ]
   },
@@ -423,7 +437,7 @@
         "messageKey": "LOCATION_ENABLED",
         "defaultValue": true,
         "label": "Allow location access",
-        "description": "Billy can use your location to provide contextually relevant information, including local weather and transit as well as more broadly understanding your local context."
+        "description": "Mica can use your location to provide contextually relevant information, including local weather and transit as well as more broadly understanding your local context."
       }
     ]
   },

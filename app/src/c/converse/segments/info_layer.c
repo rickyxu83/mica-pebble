@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +115,7 @@ static char *prv_get_content_text(InfoLayer *layer) {
       }
       return data->content_text;
     default:
-      return "(Wrist bug)";
+      return "(Mica bug)";
   }
 }
 

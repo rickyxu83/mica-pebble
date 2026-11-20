@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -7,6 +8,8 @@
 
 var imageManager = require('../lib/image_transfer').sharedManager;
 var location = require('../location');
+var config = require('../config');
+var nominatim = require('../lib/nominatim');
 
 function schema(properties, required) {
     return {
@@ -127,8 +130,7 @@ function resolveDestination(destination, latitude, longitude, callback) {
         });
         return;
     }
-    var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(destination);
-    fetchJson(url, function(err, results) {
+    nominatim.search(destination, function(err, results) {
         if (err) {
             callback(new Error('OpenStreetMap geocoding failed: ' + err.message));
             return;
@@ -155,7 +157,7 @@ function resolveDestination(destination, latitude, longitude, callback) {
 function fetchStaticMap(place, callback) {
     var size = getWatchMapSize();
     var markers = place.latitude + ',' + place.longitude + ',red-pushpin';
-    var url = 'https://staticmap.openstreetmap.de/staticmap.php' +
+    var url = config.getStaticMapBaseUrl() +
         '?center=' + encodeURIComponent(place.latitude + ',' + place.longitude) +
         '&zoom=13' +
         '&size=' + encodeURIComponent(size.width + 'x' + size.height) +
@@ -176,42 +178,6 @@ function fetchStaticMap(place, callback) {
             bytes: bytes
         });
     });
-}
-
-function fetchJson(url, callback) {
-    var finished = false;
-    var req = new XMLHttpRequest();
-    function finish(err, value) {
-        if (finished) {
-            return;
-        }
-        finished = true;
-        callback(err, value);
-    }
-    req.open('GET', url, true);
-    req.timeout = 12000;
-    req.setRequestHeader('Accept', 'application/json');
-    req.onload = function() {
-        if (req.readyState !== 4) {
-            return;
-        }
-        if (req.status < 200 || req.status >= 300) {
-            finish(new Error('HTTP ' + req.status + ': ' + String(req.responseText || '').substring(0, 120)));
-            return;
-        }
-        try {
-            finish(null, JSON.parse(req.responseText));
-        } catch (e) {
-            finish(e);
-        }
-    };
-    req.onerror = function() {
-        finish(new Error('network error'));
-    };
-    req.ontimeout = function() {
-        finish(new Error('request timed out'));
-    };
-    req.send();
 }
 
 function fetchBytes(url, callback) {

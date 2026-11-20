@@ -1,3 +1,8 @@
+/**
+ * Copyright 2026 Mica contributors.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 var STORAGE_KEY = 'billy-gemini-usage-v1';
 
 var FLASH_LITE_INPUT_PER_MILLION = 0.25;

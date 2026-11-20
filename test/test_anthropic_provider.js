@@ -12,7 +12,7 @@ const server=http.createServer((req,res)=>{
         const p=JSON.parse(b); n++;
         res.setHeader('Content-Type','application/json');
         if(n===1){
-            console.assert(p.system==='You are Wrist.','system');
+            console.assert(p.system==='You are Mica.','system');
             console.assert(p.messages[0].role==='user','user first');
             console.assert(req.headers['x-api-key']==='sk-ant-test','key header');
             console.assert(req.headers['anthropic-version']==='2023-06-01','version');

@@ -13,28 +13,28 @@ Show me a photo from this time last year.
 Show the first photo from my Google Photos picker selection.
 Try the Google Photos API for a pet photo.
 What's on my calendar today?
-Create a calendar event tomorrow at 3 PM called Billy API test for 30 minutes.
+Create a calendar event tomorrow at 3 PM called Mica API test for 30 minutes.
 Am I free tomorrow afternoon?
 Find a 30 minute opening on my calendar tomorrow.
-Create a Google Meet tomorrow at 4 PM called Billy Meet test.
+Create a Google Meet tomorrow at 4 PM called Mica Meet test.
 Find emails from Google about Gemini.
 Search my contacts for Sarah.
-Send myself an email about Billy setup with the body This is a watch test.
+Send myself an email about Mica setup with the body This is a watch test.
 What tasks are due today in Google Tasks?
-Create a Google Task called Billy task API test.
-Mark my Billy task API test complete.
+Create a Google Task called Mica task API test.
+Mark my Mica task API test complete.
 Show my recent Google Drive files.
-Find my latest Google Drive document about Billy.
-Summarize my latest Google Doc about Billy.
-Create a Google Doc called Billy setup note with the text API test from my watch.
-Read the first rows of my latest Google Sheet about Billy.
-Create a Google Sheet called Billy API test.
-Summarize my latest Google Slides deck about Billy.
-Create a Google Slides deck called Billy API test.
-Summarize my latest Google Form about Billy.
-Can Billy use Google Keep to create a note?
+Find my latest Google Drive document about Mica.
+Summarize my latest Google Doc about Mica.
+Create a Google Doc called Mica setup note with the text API test from my watch.
+Read the first rows of my latest Google Sheet about Mica.
+Create a Google Sheet called Mica API test.
+Summarize my latest Google Slides deck about Mica.
+Create a Google Slides deck called Mica API test.
+Summarize my latest Google Form about Mica.
+Can Mica use Google Keep to create a note?
 Which Google services can the companion use?
-Open Drive search for Billy notes.
+Open Drive search for Mica notes.
 Set a baking timer for five minutes.
 Get a reminder to take out the trash at 8 PM.
 Set an alarm for 11 AM tomorrow.

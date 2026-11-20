@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -182,7 +183,7 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
   }
   if (tuple->value->int32 == 1) {
     rw->talking_horse_overridden = true;
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Cobble has many Wrist bugs.");
+    talking_horse_layer_set_text(rw->talking_horse_layer, "Cobble has many Mica bugs.");
     window_set_background_color(rw->window, COLOR_FALLBACK(GColorRed, GColorDarkGray));
     vibe_haptic_feedback();
   }

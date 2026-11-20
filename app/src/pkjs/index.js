@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +41,7 @@ function doQuotaWarning() {
         if (!response.hasSubscription) {
             Pebble.showSimpleNotificationOnPebble(
                 "Subscription Needed",
-                "Wrist has no subscription. Configure your AI provider API key in the Wrist settings to start chatting."
+                "Mica has no subscription. Configure your AI provider API key in the Mica settings to start chatting."
             );
         }
     });
@@ -89,7 +90,7 @@ function handleAppMessage(e) {
 
 function doCobbleWarning() {
     if (window.cobble) {
-        console.log("WARNING: Running Wrist on Cobble is not supported, and has multiple known issues.");
+        console.log("WARNING: Running Mica on Cobble is not supported, and has multiple known issues.");
         Pebble.sendAppMessage({COBBLE_WARNING: 1});
     }
 }
@@ -99,7 +100,7 @@ Pebble.addEventListener("ready",
         // This happens before anything else because I don't trust Cobble to get through the normal flow,
         // given how many things bizarrely don't work.
         doCobbleWarning();
-        console.log("Wrist " + package_json['version']);
+        console.log("Mica " + package_json['version']);
         if (Pebble.platform === 'pypkjs') {
             console.log("Entering emulator mode.");
             var emulator_main = require('./emulator/emulator_main');

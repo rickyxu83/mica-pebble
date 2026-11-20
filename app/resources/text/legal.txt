@@ -1,19 +1,23 @@
 # Legal
-## Gemini
-Billy sends prompts from the Pebble phone app to Google Gemini using the API key you configure. Billy does not provide a hosted Gemini helper service.
-Gemini API use is subject to Google's terms at https://ai.google.dev/gemini-api/terms.
-Optional Android enhanced mode may route assistant processing through the Android companion when available.
+## AI providers
+Mica sends prompts and relevant context from the Pebble phone app to the AI provider or custom endpoint you configure. Mica does not provide a hosted AI helper service. Provider terms and privacy policies apply.
+Optional Android enhanced mode may route processing through the separately installed Android companion.
 
 ## Weather
-Weather data provided by The Weather Channel.
+Weather data by Open-Meteo.com, licensed CC BY 4.0. Mica converts responses into short summaries and watch cards.
+https://open-meteo.com/
+https://creativecommons.org/licenses/by/4.0/
+The free API is for non-commercial use and is subject to usage limits.
 
-## Wikipedia
-Some grounding information is fetched from Wikipedia during request processing. Wikipedia content is available under the Creative Commons Attribution-ShareAlike License.
-
-## Currency Data
-Exchange rate data is provided by Exchange Rate API (https://www.exchangerate-api.com/).
+## Geocoding and maps
+Map data © OpenStreetMap contributors, available under ODbL 1.0.
+https://www.openstreetmap.org/copyright
+Geocoding uses Nominatim. Static images use staticmap.openstreetmap.de. Their service policies apply.
 
 ## Disclaimers
-Billy uses AI technology and may sometimes provide inaccurate or offensive content.
-Use discretion before relying on, publishing, or otherwise using content provided by Billy.
-Don't rely on Billy for medical, legal, financial, or other professional advice. Any content regarding those topics is provided for informational purposes only and is not a substitute for advice from a qualified professional. Content does not constitute medical treatment or diagnosis.
+Mica uses AI technology and may sometimes provide inaccurate or offensive content.
+Use discretion before relying on, publishing, or otherwise using content provided by Mica.
+Don't rely on Mica for medical, legal, financial, or other professional advice. AI output is not a substitute for advice from a qualified professional.
+
+## Open source
+Mica is based on Billy and Bobby / Tiny Assistant and includes third-party software, fonts, and artwork. See About, NOTICE, and THIRD_PARTY_NOTICES.md in the source distribution. Full license texts are included in this PBW as text/licenses/ raw resources.

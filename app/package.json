@@ -1,6 +1,6 @@
 {
-  "name": "wrist",
-  "author": "Wrist contributors",
+  "name": "mica",
+  "author": "Thomas Bolger and Mica contributors",
   "version": "0.1",
   "keywords": [
     "pebble-app"
@@ -11,7 +11,7 @@
     "pebble-events": "^1.2.0"
   },
   "pebble": {
-    "displayName": "Wrist",
+    "displayName": "Mica",
     "uuid": "200ccc4b-d077-429b-919d-bc7faff368a8",
     "sdkVersion": "3",
     "enableMultiJS": true,
@@ -19,9 +19,40 @@
       "configurable",
       "location"
     ],
+    "usesPermissions": [
+      {
+        "name": "Internet",
+        "reason": "To connect to your chosen AI provider, weather, map, and feedback services.",
+        "required": true
+      },
+      {
+        "name": "LocalNetwork",
+        "reason": "To use local OpenAI-compatible servers such as Ollama or LM Studio.",
+        "required": false
+      },
+      {
+        "name": "Location",
+        "reason": "To provide local weather, nearby places, and location-aware answers when enabled.",
+        "required": false
+      },
+      {
+        "name": "Timeline",
+        "reason": "To create the reminders you request.",
+        "required": false
+      },
+      {
+        "name": "ShowNotifications",
+        "reason": "To show setup and reminder notifications on your watch.",
+        "required": false
+      },
+      {
+        "name": "LegacyPebbleKit",
+        "reason": "To communicate with the optional Android companion.",
+        "required": false
+      }
+    ],
     "targetPlatforms": [
-      "emery",
-      "gabbro"
+      "emery"
     ],
     "watchapp": {
       "watchface": false
@@ -149,7 +180,7 @@
     "resources": {
       "media": [
         {
-          "file": "icons/billy_general_menu.png",
+          "file": "icons/mica_general_menu.png",
           "menuIcon": true,
           "name": "IMAGE_MENU_ICON",
           "type": "bitmap"
@@ -242,6 +273,31 @@
         {
           "file": "text/legal.txt",
           "name": "LEGAL_TEXT",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/apache-2.0.txt",
+          "name": "LICENSE_APACHE_2_0",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/pebble-ai-companion-mit.txt",
+          "name": "LICENSE_PEBBLE_AI_COMPANION_MIT",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/clay-mit.txt",
+          "name": "LICENSE_CLAY_MIT",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/pebble-events-mit.txt",
+          "name": "LICENSE_PEBBLE_EVENTS_MIT",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/fonts-ofl-1.1.txt",
+          "name": "LICENSE_FONTS_OFL_1_1",
           "type": "raw"
         },
         {

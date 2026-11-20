@@ -1,4 +1,7 @@
 /**
+ * Copyright 2026 Mica contributors.
+ * Licensed under the Apache License, Version 2.0.
+ *
  * Anthropic Claude provider (/v1/messages).
  * Same neutral history contract as providers/openai_compat.js.
  */
@@ -145,7 +148,7 @@ function parseError(status, responseText, model) {
 exports.generate = function(input, options, callback) {
     var apiKey = config.getClaudeApiKey();
     if (!apiKey) {
-        callback(new Error('Claude API key is not configured. Open Wrist settings and add an Anthropic API key.'));
+        callback(new Error('Claude API key is not configured. Open Mica settings and add an Anthropic API key.'));
         return;
     }
     options = options || {};

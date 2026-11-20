@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +33,7 @@ static void prv_layer_update(Layer *layer, GContext *ctx);
 
 WeatherCurrentWidget* weather_current_widget_create(GRect rect, ConversationEntry* entry) {
   const FontsConfig *fonts = fonts_get_config();
-  int layer_height = fonts->title_font_cap * 1.5 + fonts->content_font_cap * 1.5 + fonts->small_font_cap * 3.75;
+  int layer_height = fonts->title_font_cap * 1.5 + fonts->content_font_cap * 1.5 + fonts->small_font_cap * 5.25;
   Layer *layer = blayer_create_with_data(GRect(rect.origin.x, rect.origin.y, rect.size.w, layer_height), sizeof(WeatherCurrentWidgetData));
   WeatherCurrentWidgetData *data = layer_get_data(layer);
   ConversationWidgetWeatherCurrent *w = &conversation_entry_get_widget(entry)->widget.weather_current;
@@ -69,6 +70,10 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
   graphics_draw_text(ctx, data->feels_like_string, fonts->small_font, GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.75), GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
   top += fonts->small_font_cap * 1.5;
   graphics_draw_text(ctx, widget->summary, fonts->small_font, GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.75), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+  top += fonts->small_font_cap * 1.5;
+  graphics_draw_text(ctx, "Weather: Open-Meteo", fonts->small_font,
+                     GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.5),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   if (data->icon) {
     gdraw_command_image_draw(ctx, data->icon, GPoint(bounds.size.w - 60, fonts->title_font_cap * 1.75));

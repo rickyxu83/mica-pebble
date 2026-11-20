@@ -1,9 +1,14 @@
+/**
+ * Modified in 2026 for Mica.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 function clarificationTestResponse() {
     return [
         {"FUNCTION":"Testing clarification picker..."},
         {
             "CLARIFY_WIDGET":1,
-            "CLARIFY_QUESTION":"Which calendar should Billy use?",
+            "CLARIFY_QUESTION":"Which calendar should Mica use?",
             "CLARIFY_CONTEXT":"Create calendar event title=Test event start=1771871400000 end=1771875000000. User answer option contains calendar id after |. Call create_calendar_event with that calendar_id.",
             "CLARIFY_OPTION_COUNT":4,
             "CLARIFY_OPTION_0":"Personal | primary",

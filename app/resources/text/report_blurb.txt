@@ -1,6 +1,6 @@
 # Report thread
-If something is wrong, you can report this conversation thread to the Billy feedback endpoint.
+If something is wrong, you can report this conversation thread to the feedback endpoint you configure.
 
 If no endpoint is configured, your phone will open a prefilled GitHub issue instead.
 
-Reports are not sent to Rebble or the original Bobby author.
+Reports are not sent to Rebble or the original Bobby or Billy authors.

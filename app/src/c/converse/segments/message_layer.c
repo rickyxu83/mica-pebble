@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,7 +114,7 @@ static char *prv_get_content_text(MessageLayer *layer) {
     case EntryTypeResponse:
       return conversation_entry_get_response(entry)->response;
     default:
-      return "(Wrist bug)";
+      return "(Mica bug)";
   }
 }
 

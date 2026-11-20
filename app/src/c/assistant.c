@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,7 +153,7 @@ static void prv_deinit(void) {
 
 int main(void) {
   VersionInfo version_info = version_get_current();
-  BOBBY_LOG(APP_LOG_LEVEL_INFO, "Wrist %d.%d", version_info.major, version_info.minor);
+  BOBBY_LOG(APP_LOG_LEVEL_INFO, "Mica %d.%d", version_info.major, version_info.minor);
   prv_init();
   
   if (alarm_manager_maybe_alarm()) {

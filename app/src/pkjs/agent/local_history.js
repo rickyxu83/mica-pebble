@@ -1,5 +1,6 @@
 /**
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +77,7 @@ exports.buildInput = function(threadId, prompt) {
     var lines = ['Recent local conversation context:'];
     turns.forEach(function(turn) {
         lines.push('User: ' + turn.user);
-        lines.push('Billy: ' + turn.assistant);
+        lines.push('Mica: ' + turn.assistant);
     });
     lines.push('Current user request: ' + prompt);
     return lines.join('\n');
