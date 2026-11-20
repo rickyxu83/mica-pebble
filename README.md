@@ -19,6 +19,18 @@ Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合
 - **语音输入**：走 Pebble 官方 Dictation API；新 Core 手机 App 在手机本地转写（系统语音识别或本地 Whisper），**语音也免费**
 - **Bobby 系完整体验**：闹钟 / 定时器 / Timeline 提醒 / 天气卡片 / 地图卡片 / 澄清选项 / 图片传输 / 个人记忆 / Quick Launch
 
+## 灵感来源
+
+Mica 的产品设计和工程实现受到以下三个开源项目的直接启发，感谢原作者与 Pebble / Rebble 社区：
+
+| 项目 | 对 Mica 的启发 |
+|---|---|
+| [**Bobby / Tiny Assistant**](https://github.com/pebble-dev/bobby-assistant) | Pebble 原生助手体验、对话与卡片设计，以及闹钟、定时器、提醒等腕上交互方式 |
+| [**Billy**](https://github.com/TomBolger/Billy) | 免订阅、用户自带 API key、无自建服务器的方向；也是 Mica 的直接代码底座 |
+| [**pebble-ai-companion**](https://github.com/Toyontaker/pebble-ai-companion) | 多 LLM Provider 的产品思路、emery / gabbro 双平台支持和圆屏适配参考 |
+
+Mica 在此基础上重点发展 **多 Provider、自定义 OpenAI-compatible Endpoint、BYOA 和零 Mica 服务器**。Mica 是修改后的独立 fork，不是上述项目或其作者的官方版本，也不暗示其背书。详细版权与修改声明见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 ## 支持状态
 
 | 平台 / 功能 | 当前状态 |
