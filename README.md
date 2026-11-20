@@ -2,9 +2,16 @@
 
 **Your AI. Your keys. Your wrist.**
 
-Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合一的 Pebble AI 助手。
+Mica is a bring-your-own-API AI assistant for modern Pebble watches — no Mica server and no subscription.
 
-面向 **Pebble Time 2（emery）** 与 **Pebble Round 2（gabbro）**。
+Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合一的 Pebble AI 助手。面向 **Pebble Time 2（emery）** 与 **Pebble Round 2（gabbro）**。
+
+> **开发预览（v0.1）**：emery 构建和模拟器流程已验证；真机尚未验收。gabbro 圆屏适配和中文 UI 仍在开发，当前不是正式商店发布版。
+
+<p>
+  <img src="docs/screenshots/mica-emery-main.png" alt="Mica emery 主界面" width="200">
+  <img src="docs/screenshots/mica-emery-menu.png" alt="Mica emery 菜单" width="200">
+</p>
 
 - **BYOA（Bring Your Own API）**：自带 API key，手机端 PKJS 直连 LLM 厂商，**零自建服务器、零 Rebble 订阅**，key 只存在手机本地
 - **OpenAI 兼容任意端点**：OpenAI / DeepSeek / Kimi / Qwen / OpenRouter / 本地 Ollama / LM Studio，只要兼容 `/v1/chat/completions` 即可
@@ -12,16 +19,31 @@ Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合
 - **语音输入**：走 Pebble 官方 Dictation API；新 Core 手机 App 在手机本地转写（系统语音识别或本地 Whisper），**语音也免费**
 - **Bobby 系完整体验**：闹钟 / 定时器 / Timeline 提醒 / 天气卡片 / 地图卡片 / 澄清选项 / 图片传输 / 个人记忆 / Quick Launch
 
-## 状态
+## 支持状态
 
-- [x] v0.1 核心：provider 抽象 + 工具调用循环（Node 测试通过）
-- [x] emery 构建、PBW 打包、模拟器安装与首次启动/主界面验证
-- [ ] emery 真机安装与 DeepSeek 端点实测
-- [ ] gabbro 圆屏 UI 适配（当前构建目标暂时只启用 emery）
-- [ ] 中文 UI 与提示词优化
-- [ ] Android companion 品牌适配（可选，Google 账号工具）
+| 平台 / 功能 | 当前状态 |
+|---|---|
+| Pebble Time 2（emery）构建与 PBW 打包 | ✅ 已通过 |
+| emery 模拟器安装、首次启动、主界面与菜单 | ✅ 已通过 |
+| emery 真机与 DeepSeek 实测 | ⏳ 等待设备验收 |
+| Pebble Round 2（gabbro） | 🚧 圆屏适配中，当前构建目标暂未启用 |
+| 中文 UI 与中文提示词 | 🚧 计划中 |
+| Android companion | 可选上游运行时，Mica 独立品牌适配尚未开始 |
 
-## 构建
+## 下载
+
+预编译的 emery 开发预览版见 **[GitHub Releases](https://github.com/rickyxu83/mica-pebble/releases/tag/v0.1.0)**。下载 PBW 后可通过 Pebble 手机 App 或 `pebble install` 安装；真机兼容性仍待设备验收。
+
+## 快速开始
+
+### 环境要求
+
+- Linux 或 macOS
+- Python 3.13（当前 `pebble-tool` 不支持 Python 3.14）
+- Node.js
+- [`uv`](https://docs.astral.sh/uv/) 与 Pebble SDK
+
+### 安装 Pebble 工具链
 
 首次准备工具链（Python 3.13）：
 
@@ -30,32 +52,64 @@ uv tool install pebble-tool --python 3.13
 pebble sdk install latest
 ```
 
-构建、测试与安装：
+### 测试、构建与模拟器安装
 
 ```bash
-node test/test_openai_provider.js
-node test/test_anthropic_provider.js
-node test/test_provider_facade.js
-node test/test_nominatim.js
+git clone https://github.com/rickyxu83/mica-pebble.git
+cd mica-pebble
+
+for test in test/test_*.js; do
+  node "$test"
+done
 
 cd app
-pebble build                         # 输出 build/app.pbw
-pebble install --emulator emery      # 真机使用 --phone <IP>
+pebble build                         # 输出 app/build/app.pbw
+pebble install --emulator emery
 ```
 
 `CMakeLists.clion.txt` 只供 IDE 索引，不是实际构建入口；构建使用 `wscript`。
 
-![Mica emery 主界面](docs/screenshots/mica-emery-main.png)
+真机到手后，在手机 Pebble App 开启 Developer Connection，然后运行：
 
-## 设置
+```bash
+cd app
+pebble install --phone <手机IP>
+```
 
-在 Pebble 手机 App 中打开 Mica 设置：
+## 配置 AI Provider
 
-| 设置项 | 说明 |
-|---|---|
-| AI provider | Gemini / OpenAI-compatible / Claude |
-| OpenAI-compatible base URL | 留空 = OpenAI 官方；DeepSeek 填 `https://api.deepseek.com/v1`；Kimi 填 `https://api.moonshot.cn/v1`；Ollama 填 `http://<电脑IP>:11434/v1`（同一 Wi-Fi） |
-| 各家 API key / model | 按 provider 分别保存，切换不用重填 |
+在 Pebble 手机 App 的 Mica 设置页中选择 Provider。API key 保存在手机本地，请求由手机直接发往所选服务，不经过 Mica 服务器。
+
+| Provider | Base URL 示例 | Model 示例 |
+|---|---|---|
+| Google Gemini | 内置，无需填写 | `gemini-3.1-flash-lite` |
+| OpenAI | 留空使用官方端点 | `gpt-4o-mini` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| Kimi | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
+| Qwen | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| Ollama | `http://<电脑IP>:11434/v1` | `llama3.1` |
+| Anthropic Claude | 内置，无需填写 | `claude-sonnet-4-5` |
+
+OpenAI-compatible 使用 `/v1/chat/completions`。各家 key、model 和 endpoint 分别保存，切换 Provider 不用重填。自定义公网 Endpoint 需要 Internet 权限；Ollama / LM Studio 等局域网服务需要 LocalNetwork 权限。
+
+> 不要把 API key 提交到仓库。公网自定义 Endpoint 建议只使用 HTTPS；纯 HTTP 仅限可信局域网。
+
+## 目录结构
+
+```text
+app/                 Pebble C UI、PKJS、设置页与资源
+test/                不调用真实付费 API 的 Node 测试
+docs/                合规审查与模拟器截图
+reference/           本地上游浅克隆（已忽略，不提交）
+LICENSE              Mica 与上游 Apache 2.0 正文
+NOTICE               fork 来源与修改声明
+PRIVACY.md           隐私政策
+THIRD_PARTY_NOTICES.md 第三方版权与数据服务署名
+```
+
+## 贡献
+
+欢迎 Issue 和 PR。提交前请运行全部 `test/test_*.js` 与 `pebble build`。项目沿用 DCO，请使用 `git commit -s` 添加与 Git 作者邮箱匹配的 `Signed-off-by`，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 合规与隐私
 
@@ -72,4 +126,4 @@ raw resources 打入 PBW。
 Apache 2.0。基于 [Billy](https://github.com/TomBolger/Billy)（Thomas Bolger）fork，
 上游为 [Bobby](https://github.com/pebble-dev/bobby-assistant) / Tiny Assistant（Rebble & Pebble 社区，Katharine Berry）。
 多 provider 设计参考 [pebble-ai-companion](https://github.com/Toyontaker/pebble-ai-companion)。
-原版权与 Apache 2.0 声明保留。
+原版权与 Apache 2.0 声明保留。捆绑字体遵循 SIL OFL 1.1，Clay、pebble-events 等依赖遵循 MIT；完整文本见 `app/resources/text/licenses/`。
