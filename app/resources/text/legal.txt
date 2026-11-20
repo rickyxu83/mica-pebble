@@ -1,0 +1,19 @@
+# Legal
+## Gemini
+Billy sends prompts from the Pebble phone app to Google Gemini using the API key you configure. Billy does not provide a hosted Gemini helper service.
+Gemini API use is subject to Google's terms at https://ai.google.dev/gemini-api/terms.
+Optional Android enhanced mode may route assistant processing through the Android companion when available.
+
+## Weather
+Weather data provided by The Weather Channel.
+
+## Wikipedia
+Some grounding information is fetched from Wikipedia during request processing. Wikipedia content is available under the Creative Commons Attribution-ShareAlike License.
+
+## Currency Data
+Exchange rate data is provided by Exchange Rate API (https://www.exchangerate-api.com/).
+
+## Disclaimers
+Billy uses AI technology and may sometimes provide inaccurate or offensive content.
+Use discretion before relying on, publishing, or otherwise using content provided by Billy.
+Don't rely on Billy for medical, legal, financial, or other professional advice. Any content regarding those topics is provided for informational purposes only and is not a substitute for advice from a qualified professional. Content does not constitute medical treatment or diagnosis.
