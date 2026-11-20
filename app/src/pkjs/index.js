@@ -40,7 +40,7 @@ function doQuotaWarning() {
         if (!response.hasSubscription) {
             Pebble.showSimpleNotificationOnPebble(
                 "Subscription Needed",
-                "In order to use Billy, you need a Rebble subscription. You can sign up for a subscription at auth.rebble.io."
+                "Wrist has no subscription. Configure your AI provider API key in the Wrist settings to start chatting."
             );
         }
     });
@@ -89,7 +89,7 @@ function handleAppMessage(e) {
 
 function doCobbleWarning() {
     if (window.cobble) {
-        console.log("WARNING: Running Billy on Cobble is not supported, and has multiple known issues.");
+        console.log("WARNING: Running Wrist on Cobble is not supported, and has multiple known issues.");
         Pebble.sendAppMessage({COBBLE_WARNING: 1});
     }
 }
@@ -99,7 +99,7 @@ Pebble.addEventListener("ready",
         // This happens before anything else because I don't trust Cobble to get through the normal flow,
         // given how many things bizarrely don't work.
         doCobbleWarning();
-        console.log("Billy " + package_json['version']);
+        console.log("Wrist " + package_json['version']);
         if (Pebble.platform === 'pypkjs') {
             console.log("Entering emulator mode.");
             var emulator_main = require('./emulator/emulator_main');

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-var gemini = require('./gemini');
+var providers = require('./providers');
 var formatting = require('./formatting');
 var localHistory = require('./local_history');
 var profileTools = require('./profile_tools');
@@ -52,7 +52,7 @@ function runCompanionlessModel(session) {
 }
 
 function runModelLoop(session, threadId, history, iteration, progress, searchGrounding, tools) {
-    gemini.generate(history, {
+    providers.generate(history, {
         enableSearchGrounding: searchGrounding,
         tools: tools,
         systemInstruction: promptBuilder.buildSystemInstruction()
@@ -73,7 +73,7 @@ function runModelLoop(session, threadId, history, iteration, progress, searchGro
             return;
         }
         if (response.functionCalls && response.functionCalls.length > 0 && iteration < 3) {
-            usage.recordGeminiResponse(response);
+            usage.recordModelResponse(response);
             appendHistoryItems(history, response.historyItems);
             executeFunctionCalls(session, history, response.functionCalls, function(stoppedForUser) {
                 if (shouldStandDown(session)) {
@@ -91,7 +91,7 @@ function runModelLoop(session, threadId, history, iteration, progress, searchGro
         }
         var text = response.text || 'I did not receive a usable answer.';
         usage.recordGeminiResponse(response);
-        if (searchGrounding && iteration === 0) {
+        if (searchGrounding && iteration === 0 && providers.currentProviderName() === 'gemini') {
             usage.recordGroundedSearch();
         }
         localHistory.recordTurn(threadId, session.prompt, text);

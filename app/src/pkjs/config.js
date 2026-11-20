@@ -44,8 +44,42 @@ exports.getAssistantRuntime = function() {
     return exports.getSetting('ASSISTANT_RUNTIME', exports.RUNTIME_AUTOMATIC);
 }
 
+exports.PROVIDER_GEMINI = 'gemini';
+exports.PROVIDER_OPENAI = 'openai';
+exports.PROVIDER_CLAUDE = 'claude';
+
+exports.getProvider = function() {
+    var provider = String(exports.getSetting('LLM_PROVIDER', exports.PROVIDER_GEMINI) || exports.PROVIDER_GEMINI);
+    if ([exports.PROVIDER_GEMINI, exports.PROVIDER_OPENAI, exports.PROVIDER_CLAUDE].indexOf(provider) === -1) {
+        return exports.PROVIDER_GEMINI;
+    }
+    return provider;
+}
+
 exports.getGeminiApiKey = function() {
     return String(exports.getSetting('GEMINI_API_KEY', '') || '').replace(/\s+/g, '');
+}
+
+exports.getOpenaiApiKey = function() {
+    return String(exports.getSetting('OPENAI_API_KEY', '') || '').replace(/\s+/g, '');
+}
+
+exports.getOpenaiBaseUrl = function() {
+    return String(exports.getSetting('OPENAI_BASE_URL', '') || '').replace(/^\s+|\s+$/g, '');
+}
+
+exports.getOpenaiModel = function() {
+    var model = String(exports.getSetting('OPENAI_MODEL', 'gpt-4o-mini') || 'gpt-4o-mini').replace(/\s+/g, '');
+    return model || 'gpt-4o-mini';
+}
+
+exports.getClaudeApiKey = function() {
+    return String(exports.getSetting('CLAUDE_API_KEY', '') || '').replace(/\s+/g, '');
+}
+
+exports.getClaudeModel = function() {
+    var model = String(exports.getSetting('CLAUDE_MODEL', 'claude-sonnet-4-5') || 'claude-sonnet-4-5').replace(/\s+/g, '');
+    return model || 'claude-sonnet-4-5';
 }
 
 exports.getGeminiModel = function() {

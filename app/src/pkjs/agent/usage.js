@@ -51,7 +51,7 @@ function tokenCount(metadata, names) {
     return 0;
 }
 
-exports.recordGeminiResponse = function(response) {
+function recordResponse(response) {
     if (!response || !response.raw) {
         return;
     }
@@ -69,6 +69,10 @@ exports.recordGeminiResponse = function(response) {
     usage.requestCount += 1;
     save(usage);
 }
+
+// Kept for backward compatibility with any legacy callers.
+exports.recordGeminiResponse = recordResponse;
+exports.recordModelResponse = recordResponse;
 
 exports.recordGroundedSearch = function() {
     var usage = load();

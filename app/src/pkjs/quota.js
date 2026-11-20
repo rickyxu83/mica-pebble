@@ -70,6 +70,16 @@ function formatUsd(value) {
 }
 
 function buildGeminiQuotaText(summary) {
+    var provider = config.getProvider();
+    if (provider !== 'gemini') {
+        var name = provider === 'claude' ? 'Claude API' : 'OpenAI-compatible API';
+        return name + ' usage (' + summary.period + ')\n' +
+            summary.requestCount + ' requests. ' +
+            summary.inputTokens + ' input tokens. ' +
+            summary.outputTokens + ' output tokens.\n\n' +
+            'No subscription and no quota. Your provider bills actual usage; check their console for costs.';
+    }
+
     return 'Gemini API billing\n' +
         summary.period + ' estimate: ' + formatUsd(summary.estimatedCostUsd) +
         ' of ' + formatUsd(summary.budgetUsd) + ' used (' + summary.percentUsed + '%).\n\n' +

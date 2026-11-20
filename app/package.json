@@ -1,6 +1,6 @@
 {
-  "name": "Billy",
-  "author": "Thomas Bolger",
+  "name": "wrist",
+  "author": "Wrist contributors",
   "version": "0.1",
   "keywords": [
     "pebble-app"
@@ -11,8 +11,8 @@
     "pebble-events": "^1.2.0"
   },
   "pebble": {
-    "displayName": "Billy",
-    "uuid": "f74b42bb-3473-444f-9722-dd34136d9b02",
+    "displayName": "Wrist",
+    "uuid": "200ccc4b-d077-429b-919d-bc7faff368a8",
     "sdkVersion": "3",
     "enableMultiJS": true,
     "capabilities": [
@@ -20,7 +20,8 @@
       "location"
     ],
     "targetPlatforms": [
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": false
@@ -125,9 +126,9 @@
       "CLARIFY_OPTION_1",
       "CLARIFY_OPTION_2",
       "CLARIFY_OPTION_3",
-        "CONFIRM_TRANSCRIPTS",
-        "ACTION_SETTINGS_UPDATED",
-        "ASSISTANT_RUNTIME",
+      "CONFIRM_TRANSCRIPTS",
+      "ACTION_SETTINGS_UPDATED",
+      "ASSISTANT_RUNTIME",
       "GEMINI_API_KEY",
       "GEMINI_MODEL",
       "GEMINI_MONTHLY_BUDGET_USD",
@@ -137,7 +138,13 @@
       "WATCH_PROMPT",
       "WATCH_READY",
       "ANDROID_COMPANION_READY",
-      "ANDROID_REQUEST_ID"
+      "ANDROID_REQUEST_ID",
+      "LLM_PROVIDER",
+      "OPENAI_API_KEY",
+      "OPENAI_BASE_URL",
+      "OPENAI_MODEL",
+      "CLAUDE_API_KEY",
+      "CLAUDE_MODEL"
     ],
     "resources": {
       "media": [
