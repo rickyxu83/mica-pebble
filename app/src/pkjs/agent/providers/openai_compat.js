@@ -185,10 +185,13 @@ function parseError(status, responseText, model) {
         // keep raw text
     }
     message = String(message || 'unknown error');
-    if (message.length > 180) {
-        message = message.substring(0, 177) + '...';
+    if (status === 404) {
+        message += '。接口地址或模型名不对：Base URL 需以 /v1 结尾，模型名需为该服务商提供的名称。';
     }
-    var err = new Error(model + ' request failed (' + status + '): ' + message);
+    if (message.length > 220) {
+        message = message.substring(0, 217) + '...';
+    }
+    var err = new Error(model + ' 请求失败 (' + status + '): ' + message);
     err.status = status;
     return err;
 }

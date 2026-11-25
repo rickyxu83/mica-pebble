@@ -137,10 +137,13 @@ function parseError(status, responseText, model) {
         // keep raw text
     }
     message = String(message || 'unknown error');
-    if (message.length > 180) {
-        message = message.substring(0, 177) + '...';
+    if (status === 404) {
+        message += '。接口地址或模型名不对，请检查设置中的端点和模型。';
     }
-    var err = new Error('Claude ' + model + ' failed (' + status + '): ' + message);
+    if (message.length > 220) {
+        message = message.substring(0, 217) + '...';
+    }
+    var err = new Error('Claude ' + model + ' 请求失败 (' + status + '): ' + message);
     err.status = status;
     return err;
 }
