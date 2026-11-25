@@ -42,6 +42,7 @@ static void prv_push_about_screen(int index, void* context);
 static void prv_push_legal_screen(int index, void* context);
 static void prv_push_reminders_screen(int index, void* context);
 static void prv_push_feedback_screen(int index, void* context);
+static void prv_push_ai_test(int index, void* context);
 
 typedef struct {
   const char *title;
@@ -49,7 +50,7 @@ typedef struct {
   void (*callback)(int index, void *context);
 } MicaMenuItem;
 
-static MicaMenuItem s_items[7];
+static MicaMenuItem s_items[8];
 
 typedef struct {
   MenuLayer *menu_layer;
@@ -69,7 +70,7 @@ void root_menu_window_push() {
 }
 
 static uint16_t prv_num_rows(MenuLayer *menu_layer, uint16_t section, void *context) {
-  return 7;
+  return 8;
 }
 
 static int16_t prv_cell_height(MenuLayer *menu_layer, MenuIndex *index, void *context) {
@@ -109,6 +110,7 @@ static void prv_window_load(Window* window) {
     s_items[4] = (MicaMenuItem) { S(STR_FEEDBACK), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_FEEDBACK), prv_push_feedback_screen };
     s_items[5] = (MicaMenuItem) { S(STR_ABOUT), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_ABOUT), prv_push_about_screen };
     s_items[6] = (MicaMenuItem) { S(STR_LEGAL), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_LEGAL), prv_push_legal_screen };
+    s_items[7] = (MicaMenuItem) { S(STR_TEST_CONNECTION), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA), prv_push_ai_test };
   }
 
   RootMenuWindowData* data = window_get_user_data(window);
@@ -143,7 +145,7 @@ static void prv_window_unload(Window* window) {
   RootMenuWindowData* data = window_get_user_data(window);
   menu_layer_destroy(data->menu_layer);
   status_bar_layer_destroy(data->status_bar);
-  for (uint32_t i = 0; i < 7; i++) {
+  for (uint32_t i = 0; i < 8; i++) {
     if (s_items[i].icon) {
       gbitmap_destroy(s_items[i].icon);
       s_items[i].icon = NULL;
@@ -158,6 +160,17 @@ static void prv_push_quota_screen(int index, void* context) { push_quota_window(
 static void prv_push_alarm_screen(int index, void* context) { alarm_menu_window_push(false); }
 static void prv_push_timer_screen(int index, void* context) { alarm_menu_window_push(true); }
 static void prv_push_legal_screen(int index, void* context) { legal_window_push(); }
+
+static void prv_push_ai_test(int index, void* context) {
+  DictionaryIterator *iter;
+  AppMessageResult result = app_message_outbox_begin(&iter);
+  if (result != APP_MSG_OK || !iter) {
+    BOBBY_LOG(APP_LOG_LEVEL_WARNING, "AI test request failed: %d", result);
+    return;
+  }
+  dict_write_uint8(iter, MESSAGE_KEY_AI_TEST_REQUEST, 1);
+  app_message_outbox_send();
+}
 static void prv_push_reminders_screen(int index, void* context) { reminders_menu_push(); }
 static void prv_push_feedback_screen(int index, void* context) { feedback_window_push(); }
 static void prv_push_about_screen(int index, void* context) { about_window_push(); }

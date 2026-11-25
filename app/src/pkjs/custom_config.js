@@ -32,6 +32,7 @@ module.exports = function(minified) {
             deepseek: {base: 'https://api.deepseek.com/v1', model: 'deepseek-chat'},
             openai: {base: 'https://api.openai.com/v1', model: 'gpt-4o-mini'},
             kimi: {base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k'},
+            kimicoding: {base: 'https://api.kimi.com/coding/v1', model: 'kimi-for-coding'},
             qwen: {base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus'},
             openrouter: {base: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini'},
             ollama: {base: 'http://<电脑IP>:11434/v1', model: 'llama3.1'},
@@ -41,7 +42,7 @@ module.exports = function(minified) {
         var knownBaseUrls = [''].concat(Object.keys(templates).map(function(key) {
             return templates[key].base;
         }));
-        var knownModels = ['', 'gpt-4o-mini', 'deepseek-chat', 'moonshot-v1-8k', 'qwen-plus', 'llama3.1', 'local-model', 'openai/gpt-4o-mini'];
+        var knownModels = ['', 'gpt-4o-mini', 'deepseek-chat', 'moonshot-v1-8k', 'qwen-plus', 'llama3.1', 'local-model', 'openai/gpt-4o-mini', 'kimi-for-coding'];
 
         function show(item, visible) {
             if (item) {

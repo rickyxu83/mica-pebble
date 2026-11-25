@@ -36,11 +36,11 @@ function runCompanionlessModel(session) {
     var threadId = localHistory.ensureThreadId(session);
     var searchGrounding = true;
     var tools = uiTools.getDeclarations();
+    // Watch tools are local and safe; expose them in every language so the
+    // model can act instead of lecturing (the old English-only gate broke CJK).
+    tools = tools.concat(watchTools.getDeclarations());
     if (profileTools.shouldExpose(session.prompt)) {
         tools = tools.concat(profileTools.getDeclarations());
-    }
-    if (watchTools.shouldExpose(session.prompt)) {
-        tools = tools.concat(watchTools.getDeclarations());
     }
     var progress = startProgress(session, searchGrounding, tools && tools.length > 0);
     runModelLoop(session, threadId, [{

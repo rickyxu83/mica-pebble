@@ -45,6 +45,7 @@ typedef enum {
   STR_TIMES_UP,
   STR_ALARM,
   STR_NO_SUBSCRIPTION,
+  STR_TEST_CONNECTION,
   STR_COUNT
 } MicaStringId;
 

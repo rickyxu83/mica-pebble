@@ -50,8 +50,12 @@
             "value": "openai"
           },
           {
-            "label": "Kimi / Moonshot",
+            "label": "Kimi / Moonshot 开放平台",
             "value": "kimi"
+          },
+          {
+            "label": "Kimi 编程版（kimi.com 订阅）",
+            "value": "kimicoding"
           },
           {
             "label": "通义千问 Qwen",

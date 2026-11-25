@@ -31,20 +31,29 @@ var runtimeRouter = require('./agent/runtime_router');
 var clay = new Clay(clayConfig, customConfigFunction);
 
 function main() {
-    doQuotaWarning();
     location.update();
     Pebble.addEventListener('appmessage', handleAppMessage);
 }
 
-function doQuotaWarning() {
-    quota.fetchQuota(function(response) {
-        if (!response.hasSubscription) {
-            Pebble.showSimpleNotificationOnPebble(
-                "Subscription Needed",
-                "Mica has no subscription. Configure your AI provider API key in the Mica settings to start chatting."
-            );
+function runAiTest() {
+    var agentProviders = require('./agent/providers');
+    var startedAt = Date.now();
+    agentProviders.generate(
+        [{type: 'user_input', content: [{type: 'text', text: 'ping'}]}],
+        {systemInstruction: 'You are Mica. Reply with exactly: OK', tools: undefined, enableSearchGrounding: false},
+        function(err, response) {
+            var providerName = agentProviders.currentProviderName();
+            var seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+            if (err) {
+                Pebble.showSimpleNotificationOnPebble('Mica 连接失败',
+                    providerName + ' · ' + seconds + 's\n' + err.message);
+                return;
+            }
+            Pebble.showSimpleNotificationOnPebble('Mica 连接成功',
+                providerName + ' · ' + seconds + 's\n回复: ' +
+                String(response && response.text ? response.text : '(空)').substring(0, 80));
         }
-    });
+    );
 }
 
 function handleAppMessage(e) {
@@ -53,6 +62,10 @@ function handleAppMessage(e) {
     var data = e.payload;
     if (data.ANDROID_COMPANION_READY) {
         runtimeRouter.recordAndroidCompanionSeen(data.ANDROID_REQUEST_ID);
+        return;
+    }
+    if (data.AI_TEST_REQUEST) {
+        runAiTest();
         return;
     }
     if (data.PROMPT) {

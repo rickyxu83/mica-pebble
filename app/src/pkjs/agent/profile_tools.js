@@ -90,7 +90,8 @@ exports.getDeclarations = function() {
 }
 
 exports.shouldExpose = function(prompt) {
-    return /\b(remember|forget|forgot|delete.*memory|what.*know.*about me|what.*remember.*about me|my profile|about me)\b/i.test(prompt);
+    return /\b(remember|forget|forgot|delete.*memory|what.*know.*about me|what.*remember.*about me|my profile|about me)\b/i.test(prompt) ||
+        /(记住|记得|忘记|忘掉|删掉记忆|删除记忆|我的档案|个人档案|关于我|你知道我什么|记得我什么)/i.test(prompt);
 }
 
 exports.execute = function(session, call, callback) {
