@@ -40,4 +40,5 @@ VibePatternSetting settings_get_alarm_vibe_pattern();
 VibePatternSetting settings_get_timer_vibe_pattern();
 bool settings_get_should_confirm_transcripts();
 int settings_get_ui_language();
+bool settings_get_use_system_cjk_font();
 const char* settings_get_assistant_runtime();
