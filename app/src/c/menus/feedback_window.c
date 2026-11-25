@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +16,14 @@
  */
 
 #include "feedback_window.h"
-#include "../util/vector_sequence_layer.h"
+#include "../util/thinking_layer.h"
 #include "../util/formatted_text_layer.h"
 #include "../util/result_window.h"
 #include "../util/strings.h"
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
 #include "../alarms/manager.h"
@@ -35,14 +39,14 @@ typedef struct {
   BitmapLayer *select_indicator_layer;
   char *blurb;
   EventHandle event_handle;
-  GDrawCommandSequence *loading_sequence;
-  VectorSequenceLayer *loading_layer;
+  ThinkingLayer *loading_layer;
   Layer *scroll_indicator_down;
   StatusBarLayer *status_bar_layer;
   bool busy;
 } FeedbackWindowData;
 
 static void prv_window_load(Window *window);
+static void prv_window_appear(Window *window);
 static void prv_window_unload(Window *window);
 static void prv_dictation_status_callback(DictationSession *session, DictationSessionStatus status, char *transcription, void *context);
 static void prv_click_config_provider();
@@ -55,9 +59,10 @@ void feedback_window_push() {
   window_set_user_data(window, data);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = prv_window_load,
+    .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_window_load(Window *window) {
@@ -101,7 +106,7 @@ static void prv_window_load(Window *window) {
   };
   content_indicator_configure_direction(indicator, ContentIndicatorDirectionDown, &down_config);
 
-  ResHandle blurb_handle = resource_get_handle(RESOURCE_ID_FEEDBACK_BLURB);
+  ResHandle blurb_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_FEEDBACK_BLURB_ZH : RESOURCE_ID_FEEDBACK_BLURB);
   size_t blurb_length = resource_size(blurb_handle);
   data->blurb = bmalloc(blurb_length + 1);
   resource_load(blurb_handle, (uint8_t *)data->blurb, blurb_length);
@@ -109,23 +114,24 @@ static void prv_window_load(Window *window) {
 
   data->text_layer = formatted_text_layer_create(GRect(5, 5, bounds.size.w - 10, 2000));
   formatted_text_layer_set_text(data->text_layer, data->blurb);
+  scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
+  mica_round_scroll(data->scroll_layer);
+  formatted_text_layer_enable_round_layout(data->text_layer);
   GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
   layer_set_frame(formatted_text_layer_get_layer(data->text_layer), GRect(5, 5, bounds.size.w - 10, text_size.h));
-  scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
   scroll_layer_set_content_size(data->scroll_layer, GSize(bounds.size.w, text_size.h + 10));
 
   data->select_indicator = bgbitmap_create_with_resource(RESOURCE_ID_BUTTON_INDICATOR);
   GRect select_indicator_size = gbitmap_get_bounds(data->select_indicator);
   grect_align(&select_indicator_size, &bounds, GAlignRight, false);
+  mica_round_action_indicator(&select_indicator_size);
   data->select_indicator_layer = bbitmap_layer_create(select_indicator_size);
   layer_add_child(layer, bitmap_layer_get_layer(data->select_indicator_layer));
   bitmap_layer_set_bitmap(data->select_indicator_layer, data->select_indicator);
   bitmap_layer_set_compositing_mode(data->select_indicator_layer, GCompOpSet);
 
-  data->loading_sequence = bgdraw_command_sequence_create_with_resource(RESOURCE_ID_RUNNING_PONY);
-  GSize pony_size = gdraw_command_sequence_get_bounds_size(data->loading_sequence);
-  data->loading_layer = vector_sequence_layer_create(GRect(bounds.size.w / 2 - pony_size.w / 2, bounds.size.h / 2 - pony_size.h / 2, pony_size.w, pony_size.h));
-  vector_sequence_layer_set_sequence(data->loading_layer, data->loading_sequence);
+  data->loading_layer = thinking_layer_create(GRect(bounds.size.w / 2 - THINKING_LAYER_WIDTH / 2,
+      bounds.size.h / 2 - THINKING_LAYER_HEIGHT / 2, THINKING_LAYER_WIDTH, THINKING_LAYER_HEIGHT));
 
   data->dict_session = dictation_session_create(0, prv_dictation_status_callback, window);
   dictation_session_enable_error_dialogs(data->dict_session, true);
@@ -136,6 +142,12 @@ static void prv_window_load(Window *window) {
   data->busy = false;
 }
 
+static void prv_window_appear(Window *window) {
+  FeedbackWindowData *data = window_get_user_data(window);
+  mica_animate_window_push(window);
+  mica_page_status_bar_colors(data->status_bar_layer);
+}
+
 static void prv_window_unload(Window *window) {
   FeedbackWindowData *data = window_get_user_data(window);
   dictation_session_destroy(data->dict_session);
@@ -143,8 +155,7 @@ static void prv_window_unload(Window *window) {
   scroll_layer_destroy(data->scroll_layer);
   gbitmap_destroy(data->select_indicator);
   bitmap_layer_destroy(data->select_indicator_layer);
-  gdraw_command_sequence_destroy(data->loading_sequence);
-  vector_sequence_layer_destroy(data->loading_layer);
+  thinking_layer_destroy(data->loading_layer);
   layer_destroy(data->scroll_indicator_down);
   status_bar_layer_destroy(data->status_bar_layer);
   events_app_message_unsubscribe(data->event_handle);
@@ -175,8 +186,7 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
   data->busy = true;
   layer_remove_from_parent(scroll_layer_get_layer(data->scroll_layer));
   layer_remove_from_parent(bitmap_layer_get_layer(data->select_indicator_layer));
-  layer_add_child(window_get_root_layer(window), vector_sequence_layer_get_layer(data->loading_layer));
-  vector_sequence_layer_play(data->loading_layer);
+  layer_add_child(window_get_root_layer(window), data->loading_layer);
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   strings_fix_android_bridge_bodge(transcription);
@@ -197,10 +207,10 @@ static void prv_app_message_received(DictionaryIterator *iter, void *context) {
   int result = tuple->value->int32;
   if (result == 0) {
     GDrawCommandImage *image = bgdraw_command_image_create_with_resource(RESOURCE_ID_SENT_IMAGE);
-    result_window_push("Sent", "Thank you!", image, BRANDED_BACKGROUND_COLOUR);
+    result_window_push(S(STR_SENT), S(STR_THANK_YOU), image, BRANDED_BACKGROUND_COLOUR);
   } else {
-    GDrawCommandImage *image = bgdraw_command_image_create_with_resource(RESOURCE_ID_FAILED_PONY);
-    result_window_push("Error", "There was a problem 🙁", image, COLOR_FALLBACK(GColorSunsetOrange, GColorWhite));
+    GBitmap *image = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
+    result_window_push_bitmap(S(STR_FAILED), S(STR_ERROR_RETRY), image, COLOR_FALLBACK(GColorSunsetOrange, GColorWhite));
   }
   window_stack_remove(window, false);
 }

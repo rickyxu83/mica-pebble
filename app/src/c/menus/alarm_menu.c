@@ -19,6 +19,9 @@
 #include "../alarms/manager.h"
 #include "../util/fonts.h"
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/time.h"
 #include "../util/vector_layer.h"
 #include "../util/memory/malloc.h"
@@ -62,7 +65,7 @@ void alarm_menu_window_push(bool for_timers) {
     .appear = prv_window_appear,
     .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_window_load(Window* window) {
@@ -72,6 +75,7 @@ static void prv_window_load(Window* window) {
   const FontsConfig *fonts = fonts_get_config();
   data->menu_layer = bmenu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, window_bounds.size.w, window_bounds.size.h - STATUS_BAR_LAYER_HEIGHT));
   menu_layer_set_highlight_colors(data->menu_layer, SELECTION_HIGHLIGHT_COLOUR, gcolor_legible_over(SELECTION_HIGHLIGHT_COLOUR));
+  mica_round_menu(data->menu_layer);
   menu_layer_set_callbacks(data->menu_layer, window, (MenuLayerCallbacks) {
     .get_num_rows = prv_get_num_rows,
     .draw_row = prv_draw_row,
@@ -85,7 +89,7 @@ static void prv_window_load(Window* window) {
   text_layer_set_background_color(data->empty_text_layer, GColorClear);
   text_layer_set_font(data->empty_text_layer, fonts->title_font);
   text_layer_set_text_alignment(data->empty_text_layer, GTextAlignmentCenter);
-  text_layer_set_text(data->empty_text_layer, data->for_timers ? "No timers set. Ask Mica to set some." : "No alarms set. Ask Mica to set some.");
+  text_layer_set_text(data->empty_text_layer, data->for_timers ? S(STR_NO_TIMERS) : S(STR_NO_ALARMS));
   if (prv_get_num_rows(data->menu_layer, 0, window) == 0) {
     prv_show_empty(window);
   } else {
@@ -106,8 +110,8 @@ static void prv_show_empty(Window *window) {
   layer_remove_from_parent(menu_layer_get_layer(data->menu_layer));
   window_set_click_config_provider(window, NULL);
 
-  data->sleeping_horse_image = bgbitmap_create_with_resource(RESOURCE_ID_SLEEPING_PONY);
-  data->sleeping_horse_layer = bbitmap_layer_create(GRect(window_bounds.size.w / 2 - 25, window_bounds.size.h - 55, 50, 50));
+  data->sleeping_horse_image = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
+  data->sleeping_horse_layer = bbitmap_layer_create(GRect(window_bounds.size.w / 2 - 32, window_bounds.size.h - 88, 64, 64));
   bitmap_layer_set_bitmap(data->sleeping_horse_layer, data->sleeping_horse_image);
   bitmap_layer_set_background_color(data->sleeping_horse_layer, GColorClear);
   bitmap_layer_set_compositing_mode(data->sleeping_horse_layer, GCompOpSet);
@@ -134,7 +138,9 @@ static void prv_window_unload(Window* window) {
 }
 
 static void prv_window_appear(Window* window) {
+  mica_animate_window_push(window);
   AlarmMenuWindowData* data = window_get_user_data(window);
+  mica_page_status_bar_colors(data->status_bar);
   if (!data->for_timers) {
     return;
   }
@@ -196,9 +202,9 @@ static void prv_draw_row(GContext* ctx, const Layer* cell_layer, MenuIndex* cell
             format_time_ampm(title, sizeof(title), &time_struct);
             time_t midnight = time_start_of_today();
             if (t < midnight + 86400) {
-              snprintf(subtitle, sizeof(subtitle), "Today");
+              snprintf(subtitle, sizeof(subtitle), "%s", S(STR_TODAY));
             } else if (t < midnight + 86400 * 2) {
-              snprintf(subtitle, sizeof(subtitle), "Tomorrow");
+              snprintf(subtitle, sizeof(subtitle), "%s", S(STR_TOMORROW));
             } else {
               strftime(subtitle, sizeof(subtitle), "%a, %b %d", &time_struct);
             }

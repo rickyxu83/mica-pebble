@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@
 #include "vector_layer.h"
 #include "fonts.h"
 #include "style.h"
+#include "transition.h"
 #include "../util/memory/malloc.h"
 #include <pebble.h>
 
@@ -65,7 +67,7 @@ void result_window_push(const char* title, const char* text, GDrawCommandImage *
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 void result_window_push_bitmap(const char* title, const char* text, GBitmap *image, GColor background_color) {
@@ -89,7 +91,7 @@ void result_window_push_bitmap(const char* title, const char* text, GBitmap *ima
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_window_load(Window* window) {
@@ -162,6 +164,11 @@ static void prv_window_unload(Window* window) {
 
 static void prv_window_appear(Window* window) {
   ResultWindowData* data = window_get_user_data(window);
+#ifdef PBL_COLOR
+  mica_animate_window_push_colored(window, data->background_color);
+#else
+  mica_animate_window_push_colored(window, GColorWhite);
+#endif
   if (data->timer) {
     app_timer_cancel(data->timer);
   }

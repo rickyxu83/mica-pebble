@@ -80,7 +80,11 @@ exports.buildSystemInstruction = function() {
     if (userProfileContext) {
         parts.push('Mica user profile context from local settings. Use it when relevant, but do not reveal or dwell on it unless the user asks: ' + userProfileContext);
     }
-    if (language && language !== 'automatic') {
+    if (language === 'zh_CN') {
+        parts.push('用简体中文回答。手表上的最终回复保持自然、简短、直接，通常 2-4 个短句；不要使用 Markdown 标记，不要把工具名称翻译给用户。');
+    } else if (language === 'zh_TW') {
+        parts.push('用繁體中文回答。手錶上的最終回覆保持自然、簡短、直接，通常 2-4 個短句；不要使用 Markdown 標記。');
+    } else if (language && language !== 'automatic') {
         parts.push('Respond using language code ' + language + '.');
     } else {
         parts.push('Respond in the language the user is using unless they ask otherwise.');

@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +25,8 @@ FormattedTextLayer* formatted_text_layer_create(GRect frame);
 Layer* formatted_text_layer_get_layer(FormattedTextLayer* layer);
 void formatted_text_layer_destroy(FormattedTextLayer* layer);
 void formatted_text_layer_set_text(FormattedTextLayer* layer, const char* text);
+// Constrain this custom renderer to the round display's safe text width.
+void formatted_text_layer_enable_round_layout(FormattedTextLayer* layer);
 void formatted_text_layer_set_title_font(FormattedTextLayer* layer, GFont font);
 void formatted_text_layer_set_subtitle_font(FormattedTextLayer* layer, GFont font);
 void formatted_text_layer_set_body_font(FormattedTextLayer* layer, GFont font);

@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +18,12 @@
 #include "alarm_window.h"
 #include "../util/fonts.h"
 #include "../util/style.h"
-#include "../util/vector_sequence_layer.h"
 #include "../util/result_window.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
 #include "../settings/settings.h"
+#include "../util/i18n.h"
+#include "../util/transition.h"
 #include "../vibes/sad_vibe_score.h"
 
 #include <pebble-events/pebble-events.h>
@@ -38,8 +40,8 @@ typedef struct {
   StatusBarLayer *status_bar;
   AppTimer* timer;
   EventHandle tick_handle;
-  VectorSequenceLayer *animation_layer;
-  GDrawCommandSequence *draw_commands;
+  BitmapLayer *animation_layer;
+  GBitmap *mascot;
   GBitmap *icon_snooze;
   GBitmap *icon_x;
   ActionBarLayer *action_bar;
@@ -80,7 +82,7 @@ void alarm_window_push(time_t alarm_time, bool is_timer, char *name) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_window_load(Window *window) {
@@ -92,7 +94,7 @@ static void prv_window_load(Window *window) {
   if (data->name) {
     text_layer_set_text(data->title_layer, data->name);
   } else {
-    text_layer_set_text(data->title_layer, data->is_timer ? "Time's up!" : "Alarm!");
+    text_layer_set_text(data->title_layer, data->is_timer ? S(STR_TIMES_UP) : S(STR_ALARM));
   }
   text_layer_set_font(data->title_layer, fonts->title_font);
   text_layer_set_text_alignment(data->title_layer, GTextAlignmentCenter);
@@ -125,11 +127,13 @@ static void prv_window_load(Window *window) {
   action_bar_layer_set_context(data->action_bar, window);
   action_bar_layer_set_click_config_provider(data->action_bar, prv_click_config_provider);
   action_bar_layer_add_to_window(data->action_bar, window);
-  data->animation_layer = vector_sequence_layer_create(GRect((rect.size.w - ACTION_BAR_WIDTH) / 2 - 25, rect.size.h - 55, 50, 50));
-  data->draw_commands = bgdraw_command_sequence_create_with_resource(RESOURCE_ID_TIRED_PONY);
+  data->mascot = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
+  data->animation_layer = bbitmap_layer_create(GRect((rect.size.w - ACTION_BAR_WIDTH) / 2 - 32, rect.size.h - 88, 64, 64));
+  bitmap_layer_set_bitmap(data->animation_layer, data->mascot);
+  bitmap_layer_set_background_color(data->animation_layer, GColorClear);
+  bitmap_layer_set_compositing_mode(data->animation_layer, GCompOpSet);
   data->vibes = prv_load_vibe_score(data->is_timer);
-  vector_sequence_layer_set_sequence(data->animation_layer, data->draw_commands);
-  layer_add_child(root_layer, (Layer *)data->animation_layer);
+  layer_add_child(root_layer, bitmap_layer_get_layer(data->animation_layer));
 }
 
 static void prv_window_unload(Window *window) {
@@ -142,8 +146,8 @@ static void prv_window_unload(Window *window) {
   action_bar_layer_destroy(data->action_bar);
   gbitmap_destroy(data->icon_snooze);
   gbitmap_destroy(data->icon_x);
-  gdraw_command_sequence_destroy(data->draw_commands);
-  vector_sequence_layer_destroy(data->animation_layer);
+  gbitmap_destroy(data->mascot);
+  bitmap_layer_destroy(data->animation_layer);
   events_tick_timer_service_unsubscribe(data->tick_handle);
   if (data->name) {
     free(data->name);
@@ -154,16 +158,15 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
+  mica_animate_window_push_colored(window, COLOR_FALLBACK(ACCENT_COLOUR, GColorWhite));
   AlarmWindowData* data = window_get_user_data(window);
   light_enable_interaction();
   prv_do_vibe(window);
-  vector_sequence_layer_play(data->animation_layer);
 }
 
 static void prv_window_disappear(Window *window) {
   AlarmWindowData* data = window_get_user_data(window);
   prv_stop_vibe(window);
-  vector_sequence_layer_stop(data->animation_layer);
 }
 
 static void prv_do_vibe(Window *window) {
@@ -228,10 +231,10 @@ static void prv_handle_snooze(ClickRecognizerRef recognizer, void *context) {
   }
   if (result == S_SUCCESS) {
     const char* text = data->is_timer ? "Snoozed for 1 minute" : "Snoozed for 10 minutes";
-    result_window_push_bitmap("Snoozed", text, bgbitmap_create_with_resource(RESOURCE_ID_SLEEPING_PONY), BRANDED_BACKGROUND_COLOUR);
+    result_window_push_bitmap(S(STR_SNOOZED), text, bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK), BRANDED_BACKGROUND_COLOUR);
   } else {
     const char* text = data->is_timer ? "Failed to snooze. Timer dismissed." : "Failed to snooze. Alarm dismissed.";
-    result_window_push("Failed", text, bgdraw_command_image_create_with_resource(RESOURCE_ID_FAILED_PONY), GColorSunsetOrange);
+    result_window_push_bitmap(S(STR_FAILED), text, bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK), GColorSunsetOrange);
   }
   window_stack_remove(window, false);
 }

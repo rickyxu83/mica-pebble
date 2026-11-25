@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +63,13 @@ bool settings_get_should_confirm_transcripts() {
   return persist_read_bool(PERSIST_KEY_CONFIRM_TRANSCRIPTS);
 }
 
+int settings_get_ui_language() {
+  if (!persist_exists(PERSIST_KEY_UI_LANGUAGE)) {
+    return 1;
+  }
+  return persist_read_int(PERSIST_KEY_UI_LANGUAGE) == 0 ? 0 : 1;
+}
+
 const char* settings_get_assistant_runtime() {
   if (persist_exists(PERSIST_KEY_ASSISTANT_RUNTIME)) {
     persist_read_string(PERSIST_KEY_ASSISTANT_RUNTIME, s_assistant_runtime, sizeof(s_assistant_runtime));
@@ -82,6 +90,9 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
       persist_write_int(PERSIST_KEY_TIMER_VIBE_PATTERN, atoi(tuple->value->cstring));
     } else if (tuple->key == MESSAGE_KEY_CONFIRM_TRANSCRIPTS) {
       persist_write_bool(PERSIST_KEY_CONFIRM_TRANSCRIPTS, tuple->value->int8);
+    } else if (tuple->key == MESSAGE_KEY_UI_LANGUAGE) {
+      // Applied on the next app launch so custom fonts reload consistently.
+      persist_write_int(PERSIST_KEY_UI_LANGUAGE, atoi(tuple->value->cstring));
     } else if (tuple->key == MESSAGE_KEY_ASSISTANT_RUNTIME) {
       persist_write_string(PERSIST_KEY_ASSISTANT_RUNTIME, tuple->value->cstring);
     }

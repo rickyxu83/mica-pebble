@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +23,9 @@
 #include "../settings/settings.h"
 #include "../util/thinking_layer.h"
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/action_menu_crimes.h"
 #include "../util/logging.h"
 #include "../util/memory/malloc.h"
@@ -34,7 +38,7 @@
 #include "report_window.h"
 
 #define PADDING 5
-#define CLARIFICATION_DICTATE_OPTION "Dictate..."
+#define CLARIFICATION_DICTATE_OPTION S(STR_DICTATE)
 
 struct SessionWindow {
   Window* window;
@@ -74,6 +78,7 @@ static void prv_select_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_select_long_pressed(ClickRecognizerRef recognizer, void *context);
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_down_clicked(ClickRecognizerRef recognizer, void *context);
+static void prv_back_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_update_thinking_layer(SessionWindow* sw);
 static int16_t prv_content_height(const SessionWindow* sw);
 static void prv_scrolled_handler(ScrollLayer* scroll_layer, void* context);
@@ -104,7 +109,7 @@ void session_window_push(int timeout, char *starting_prompt) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_destroy(SessionWindow *sw) {
@@ -192,6 +197,7 @@ static void prv_window_load(Window *window) {
   sw->button_bitmap = bgbitmap_create_with_resource(RESOURCE_ID_BUTTON_INDICATOR);
   GRect select_indicator_size = gbitmap_get_bounds(sw->button_bitmap);
   grect_align(&select_indicator_size, &window_bounds, GAlignRight, false);
+  mica_round_action_indicator(&select_indicator_size);
   sw->button_layer = bbitmap_layer_create(select_indicator_size);
   bitmap_layer_set_bitmap(sw->button_layer, sw->button_bitmap);
   bitmap_layer_set_compositing_mode(sw->button_layer, GCompOpSet);
@@ -203,7 +209,9 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
+  mica_animate_window_push(window);
   SessionWindow *sw = (SessionWindow *)window_get_user_data(window);
+  mica_page_status_bar_colors(sw->status_layer);
   if (sw->starting_prompt) {
     conversation_manager_add_input(sw->manager, sw->starting_prompt);
     sw->query_time = time(NULL);
@@ -228,6 +236,29 @@ static void prv_window_unload(Window *window) {
   prv_destroy(sw);
 }
 
+static void prv_dictation_error(SessionWindow *sw, DictationSessionStatus status) {
+  const char *message;
+  if (status == DictationSessionStatusFailureDisabled) {
+    message = i18n_is_chinese()
+        ? "手机的语音转写已停用。请在 Pebble App 中允许 Usage logs / 语音数据后重试。"
+        : "Voice transcription is disabled. Allow Usage logs / voice data in the Pebble phone app and retry.";
+  } else if (status == DictationSessionStatusFailureConnectivityError) {
+    message = i18n_is_chinese()
+        ? "语音需要手机蓝牙和网络连接。请连接手机后重试。"
+        : "Dictation needs the phone's Bluetooth and Internet connection.";
+  } else if (status == DictationSessionStatusFailureNoSpeechDetected) {
+    message = i18n_is_chinese()
+        ? "没有听到声音。请靠近手表麦克风，再说一次。"
+        : "No speech detected. Speak closer to the watch microphone.";
+  } else {
+    message = i18n_is_chinese()
+        ? "语音识别失败。请检查手机连接和 Pebble App 版本后重试，或返回使用示例问题。"
+        : "Dictation failed. Check the phone connection and Pebble app version, or use a sample prompt.";
+  }
+  BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Dictation failed: %d", (int)status);
+  conversation_add_error(conversation_manager_get_conversation(sw->manager), message);
+}
+
 static void prv_dictation_status_callback(DictationSession *session, DictationSessionStatus status, char *transcript, void *context) {
   SessionWindow *sw = context;
   switch (status) {
@@ -242,11 +273,16 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
     }
     sw->query_time = time(NULL);
     break;
-  default:
+  case DictationSessionStatusFailureTranscriptionRejected:
+  case DictationSessionStatusFailureTranscriptionRejectedWithError:
     sw->dictating_clarification = false;
     if (conversation_peek(conversation_manager_get_conversation(sw->manager)) == NULL) {
       window_stack_pop(true);
     }
+    break;
+  default:
+    sw->dictating_clarification = false;
+    prv_dictation_error(sw, status);
     break;
   }
 }
@@ -436,7 +472,20 @@ static void prv_conversation_entry_deleted_handler(int index, void* context) {
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Removed top segment; adjusted upward by %d pixels.", removed_height);
 }
 
+static Window *context_window(SessionWindow *sw) {
+  return sw ? sw->window : NULL;
+}
+
+static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
+  SessionWindow *sw = context;
+  if (sw && sw->dictation) {
+    dictation_session_stop(sw->dictation);
+  }
+  mica_animate_window_pop(context_window(sw));
+}
+
 static void prv_click_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_BACK, prv_back_clicked);
   window_single_click_subscribe(BUTTON_ID_UP, prv_up_clicked);
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 150, prv_up_clicked);
   window_single_click_subscribe(BUTTON_ID_SELECT, prv_select_clicked);
@@ -686,7 +735,25 @@ static void prv_start_dictation(SessionWindow *sw) {
   // Dictation needs a ridiculous amount of memory to behave properly.
   free(bmalloc(2048));
 #if !ENABLE_FEATURE_FIXED_PROMPT
-  dictation_session_start(sw->dictation);
+  if (!sw->dictation) {
+    // The phone may have connected after this window was created. Retry rather
+    // than caching a NULL session for the lifetime of the window.
+    sw->dictation = dictation_session_create(0, prv_dictation_status_callback, sw);
+    if (sw->dictation) {
+      dictation_session_enable_confirmation(sw->dictation, settings_get_should_confirm_transcripts());
+    }
+  }
+  if (!sw->dictation) {
+    conversation_add_error(conversation_manager_get_conversation(sw->manager),
+        i18n_is_chinese()
+            ? "手机未连接，或当前 Pebble App 不支持语音输入。请检查连接和 App 版本，或返回使用示例问题。"
+            : "Phone not connected or dictation is unsupported by this Pebble app. Check the connection/app version or use a sample prompt.");
+    return;
+  }
+  DictationSessionStatus start_status = dictation_session_start(sw->dictation);
+  if (start_status != DictationSessionStatusSuccess) {
+    prv_dictation_error(sw, start_status);
+  }
 #else
   // skip this, just send some nonsense.
   prv_dictation_status_callback(sw->dictation, DictationSessionStatusSuccess, "This is just a test message", sw);

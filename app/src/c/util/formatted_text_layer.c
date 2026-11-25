@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +46,7 @@ typedef struct {
   size_t fragment_count;
   size_t largest_fragment_length;
   GTextAlignment alignment;
+  int16_t horizontal_inset;
   int16_t total_height;
 } FormattedTextLayerData;
 
@@ -81,6 +83,17 @@ void formatted_text_layer_set_text(FormattedTextLayer* layer, const char* text) 
   FormattedTextLayerData *data = layer_get_data(layer);
   data->text = text;
   prv_recalculate(layer);
+}
+
+void formatted_text_layer_enable_round_layout(FormattedTextLayer* layer) {
+#if defined(PBL_ROUND)
+  FormattedTextLayerData *data = layer_get_data(layer);
+  // This custom renderer predates Pebble's text-flow API. A conservative
+  // constant inset is reliable at every scroll position and avoids the
+  // allocator failure seen when applying screen flow to its 10000px canvas.
+  data->horizontal_inset = 64;
+  prv_recalculate(layer);
+#endif
 }
 
 void formatted_text_layer_set_title_font(FormattedTextLayer* layer, GFont font) {
@@ -134,7 +147,8 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
       }
     }
     // We're at least partially on screen, get to it
-    GRect frame = GRect(0, fragment->vertical_offset, bounds.size.w, 10000);
+    GRect frame = GRect(data->horizontal_inset, fragment->vertical_offset,
+                        bounds.size.w - data->horizontal_inset * 2, 10000);
     strncpy(buffer, fragment->text, fragment->text_length);
     buffer[fragment->text_length] = '\0';
     graphics_draw_text(ctx, buffer, font_lookup[fragment->type], frame, GTextOverflowModeWordWrap, data->alignment, NULL);
@@ -146,6 +160,9 @@ static void prv_fragment(FormattedTextLayerData *data) {
   if (data->fragments) {
     free(data->fragments);
   }
+  // Text can be set again after round layout is enabled. Reset the count or
+  // the next parse appends past the newly allocated fragment array.
+  data->fragment_count = 0;
   int max_fragment_count = prv_segment_upper_bound(data->text);
   data->largest_fragment_length = 0;
   data->fragments = bmalloc(max_fragment_count * sizeof(TextFragment));
@@ -204,7 +221,7 @@ static void prv_fragment(FormattedTextLayerData *data) {
 static void prv_layout(FormattedTextLayer* layer) {
   FormattedTextLayerData *data = layer_get_data(layer);
   GRect bounds = layer_get_bounds(layer);
-  GRect sizing_frame = GRect(0, 0, bounds.size.w, 10000);
+  GRect sizing_frame = GRect(0, 0, bounds.size.w - data->horizontal_inset * 2, 10000);
 
   char *buffer = bmalloc(data->largest_fragment_length + 1);
 

@@ -68,7 +68,7 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
   top += 40;
   graphics_draw_text(ctx, widget->summary, fonts->small_font, GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 2), GTextOverflowModeFill, GTextAlignmentRight, NULL);
   top += fonts->small_font_cap * 1.5;
-  graphics_draw_text(ctx, "Weather: Open-Meteo", fonts->small_font,
+  graphics_draw_text(ctx, "Open-Meteo", fonts->small_font,
                      GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.5),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 

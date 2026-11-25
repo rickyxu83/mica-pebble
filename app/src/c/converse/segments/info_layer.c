@@ -17,6 +17,7 @@
 
 #include "info_layer.h"
 #include "../../util/fonts.h"
+#include "../../util/i18n.h"
 #include "../../util/memory/malloc.h"
 #include "../../util/memory/sdk.h"
 #include <pebble.h>
@@ -25,6 +26,11 @@
 #define TEXT_PADDING_LEFT 2
 #define TEXT_PADDING_RIGHT 5
 #define UNAVAILABLE_WIDTH (STRIPE_WIDTH + TEXT_PADDING_LEFT + TEXT_PADDING_RIGHT)
+#if defined(PBL_ROUND)
+#define LAYOUT_INSET 64
+#else
+#define LAYOUT_INSET 0
+#endif
 
 typedef struct {
   ConversationEntry* entry;
@@ -51,7 +57,7 @@ InfoLayer* info_layer_create(GRect rect, ConversationEntry* entry) {
     data->content_text = NULL;
     data->content_height = 24;
     data->content_height = prv_get_content_height(layer);
-    data->content_layer = btext_layer_create(GRect(STRIPE_WIDTH + TEXT_PADDING_LEFT, 1, rect.size.w - UNAVAILABLE_WIDTH, data->content_height));
+    data->content_layer = btext_layer_create(GRect(LAYOUT_INSET + STRIPE_WIDTH + TEXT_PADDING_LEFT, 1, rect.size.w - UNAVAILABLE_WIDTH - LAYOUT_INSET * 2, data->content_height));
     text_layer_set_text(data->content_layer, prv_get_content_text(layer));
     text_layer_set_font(data->content_layer, fonts->text_font);
     text_layer_set_background_color(data->content_layer, GColorClear);
@@ -123,7 +129,7 @@ static int prv_get_content_height(InfoLayer* layer) {
   char* text = prv_get_content_text(layer);
   const FontsConfig *fonts = fonts_get_config();
   const GFont font = fonts->text_font;
-  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - UNAVAILABLE_WIDTH, 10000);
+  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - UNAVAILABLE_WIDTH - LAYOUT_INSET * 2, 10000);
   GTextAlignment alignment = GTextAlignmentCenter;
   return graphics_text_layout_get_content_size(text, font, rect, GTextOverflowModeTrailingEllipsis, alignment).h;
 }
@@ -133,12 +139,12 @@ static void prv_layer_render(Layer* layer, GContext* ctx) {
   GRect bounds = layer_get_bounds(layer);
   GColor stripe_color = prv_get_stripe_color(data->entry);
   graphics_context_set_fill_color(ctx, stripe_color);
-  graphics_fill_rect(ctx, GRect(0, 0, STRIPE_WIDTH, bounds.size.h), 0, GCornerNone);
+  graphics_fill_rect(ctx, GRect(LAYOUT_INSET, 0, STRIPE_WIDTH, bounds.size.h), 0, GCornerNone);
   graphics_context_set_stroke_color(ctx, GColorBlack);
-  graphics_draw_line(ctx, GPoint(0, 0), GPoint(bounds.size.w, 0));
-  graphics_draw_line(ctx, GPoint(0, bounds.size.h - 1), GPoint(bounds.size.w, bounds.size.h - 1));
+  graphics_draw_line(ctx, GPoint(LAYOUT_INSET, 0), GPoint(bounds.size.w - LAYOUT_INSET, 0));
+  graphics_draw_line(ctx, GPoint(LAYOUT_INSET, bounds.size.h - 1), GPoint(bounds.size.w - LAYOUT_INSET, bounds.size.h - 1));
   if (data->icon) {
-    gdraw_command_image_draw(ctx, data->icon, GPoint(3, 10));
+    gdraw_command_image_draw(ctx, data->icon, GPoint(LAYOUT_INSET + 3, 10));
   }
 }
 
@@ -158,9 +164,9 @@ static void prv_format_time(time_t when, char* buffer, size_t size) {
   }
 
   if (when < midnight + 86400) {
-    snprintf(buffer, size, "today at %s", time_str);
+    i18n_is_chinese() ? snprintf(buffer, size, "今天 %s", time_str) : snprintf(buffer, size, "today at %s", time_str);
   } else if (when < midnight + 86400 * 2) {
-    snprintf(buffer, size, "tomorrow at %s", time_str);
+    i18n_is_chinese() ? snprintf(buffer, size, "明天 %s", time_str) : snprintf(buffer, size, "tomorrow at %s", time_str);
   } else {
     char date_str[15];
     strftime(date_str, sizeof(date_str), "%a, %b %d", localtime(&when));

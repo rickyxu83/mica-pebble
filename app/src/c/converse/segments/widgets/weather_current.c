@@ -18,6 +18,7 @@
 #include "weather_current.h"
 #include "weather_util.h"
 #include "../../../util/fonts.h"
+#include "../../../util/i18n.h"
 #include "../../../util/memory/sdk.h"
 #include <pebble.h>
 
@@ -44,7 +45,9 @@ WeatherCurrentWidget* weather_current_widget_create(GRect rect, ConversationEntr
 
   snprintf(data->temp_string, sizeof(data->temp_string), "%d°", w->temperature);
   snprintf(data->wind_speed, sizeof(data->wind_speed), "%d %s", w->wind_speed, w->wind_speed_unit);
-  snprintf(data->feels_like_string, sizeof(data->feels_like_string), "Seems %d°", w->feels_like);
+  i18n_is_chinese() ?
+    snprintf(data->feels_like_string, sizeof(data->feels_like_string), "体感 %d°", w->feels_like) :
+    snprintf(data->feels_like_string, sizeof(data->feels_like_string), "Feels %d°", w->feels_like);
   return layer;
 }
 
@@ -71,7 +74,7 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
   top += fonts->small_font_cap * 1.5;
   graphics_draw_text(ctx, widget->summary, fonts->small_font, GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.75), GTextOverflowModeFill, GTextAlignmentLeft, NULL);
   top += fonts->small_font_cap * 1.5;
-  graphics_draw_text(ctx, "Weather: Open-Meteo", fonts->small_font,
+  graphics_draw_text(ctx, "Open-Meteo", fonts->small_font,
                      GRect(5, top, bounds.size.w - 10, fonts->small_font_cap * 1.5),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 

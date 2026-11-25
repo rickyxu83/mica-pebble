@@ -29,6 +29,7 @@
 #include <pebble-events/pebble-events.h>
 
 #include "util/fonts.h"
+#include "util/i18n.h"
 #include "util/logging.h"
 #include "util/memory/pressure.h"
 
@@ -130,6 +131,7 @@ static void prv_init(void) {
   events_app_message_open();
   s_prompt_inbox_handle = events_app_message_register_inbox_received(prv_prompt_inbox_received, NULL);
   alarm_manager_init();
+  i18n_init();
   fonts_load();
 }
 

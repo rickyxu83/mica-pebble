@@ -5,6 +5,10 @@
     "size": 1
   },
   {
+    "type": "text",
+    "defaultValue": "选择服务商并填入 Key 即可。Key 仅保存在本机，请求直接从手机发往 Provider，不经过 Mica 服务器。"
+  },
+  {
     "type": "section",
     "items": [
       {
@@ -12,7 +16,7 @@
         "id": "LLM_PROVIDER",
         "messageKey": "LLM_PROVIDER",
         "label": "AI provider",
-        "description": "Choose your LLM backend. Keys are stored locally on the phone; requests go directly from the phone to the provider. No server, no subscription.",
+        "description": "选择模型服务。Key 仅保存在手机本地，请求直接发往所选 Provider，不经过 Mica 服务器，无订阅费。",
         "defaultValue": "gemini",
         "options": [
           {
@@ -30,6 +34,55 @@
         ]
       },
       {
+        "type": "select",
+        "id": "OPENAI_SERVICE",
+        "messageKey": "OPENAI_SERVICE",
+        "label": "兼容服务",
+        "description": "选择后自动填入官方地址和推荐模型；通常只需再填 API Key。",
+        "defaultValue": "deepseek",
+        "options": [
+          {
+            "label": "DeepSeek（推荐）",
+            "value": "deepseek"
+          },
+          {
+            "label": "OpenAI",
+            "value": "openai"
+          },
+          {
+            "label": "Kimi / Moonshot",
+            "value": "kimi"
+          },
+          {
+            "label": "通义千问 Qwen",
+            "value": "qwen"
+          },
+          {
+            "label": "OpenRouter",
+            "value": "openrouter"
+          },
+          {
+            "label": "Ollama（本机）",
+            "value": "ollama"
+          },
+          {
+            "label": "LM Studio（本机）",
+            "value": "lmstudio"
+          },
+          {
+            "label": "其他 OpenAI 兼容端点",
+            "value": "custom"
+          }
+        ]
+      },
+      {
+        "type": "toggle",
+        "id": "SHOW_ADVANCED",
+        "label": "显示高级设置",
+        "description": "默认折叠端点、模型、Runtime 和反馈等高级项，普通使用无需展开。",
+        "defaultValue": false
+      },
+      {
         "type": "heading",
         "defaultValue": "Assistant"
       },
@@ -38,8 +91,8 @@
         "id": "ASSISTANT_RUNTIME",
         "messageKey": "ASSISTANT_RUNTIME",
         "label": "Runtime",
-        "description": "Automatic sends prompts to the Android companion when it is installed. Choose Companionless when using only the PBW.",
-        "defaultValue": "automatic",
+        "description": "默认 Companionless：只用手表 App 和手机即可运行，无需安装额外 companion。",
+        "defaultValue": "companionless",
         "options": [
           {
             "label": "Automatic",
@@ -59,9 +112,15 @@
         "type": "input",
         "id": "GEMINI_API_KEY",
         "messageKey": "GEMINI_API_KEY",
-        "label": "Gemini API key",
-        "description": "Stored locally by the Pebble phone app. Required for companionless mode.",
-        "defaultValue": ""
+        "label": "Gemini API Key",
+        "description": "仅保存在手机本地。",
+        "defaultValue": "",
+        "attributes": {
+          "type": "password",
+          "autocomplete": "off",
+          "autocapitalize": "off",
+          "spellcheck": "false"
+        }
       },
       {
         "type": "input",
@@ -75,16 +134,22 @@
         "type": "input",
         "id": "OPENAI_API_KEY",
         "messageKey": "OPENAI_API_KEY",
-        "label": "OpenAI-compatible API key",
-        "description": "Required when provider is OpenAI-compatible. For local Ollama/LM Studio any non-empty placeholder works.",
-        "defaultValue": ""
+        "label": "API Key（OpenAI 兼容）",
+        "description": "仅保存在手机本地。Ollama / LM Studio 可填任意非空占位符。",
+        "defaultValue": "",
+        "attributes": {
+          "type": "password",
+          "autocomplete": "off",
+          "autocapitalize": "off",
+          "spellcheck": "false"
+        }
       },
       {
         "type": "input",
         "id": "OPENAI_BASE_URL",
         "messageKey": "OPENAI_BASE_URL",
-        "label": "OpenAI-compatible base URL",
-        "description": "Leave blank for https://api.openai.com/v1. Examples: https://api.deepseek.com/v1 · https://api.moonshot.cn/v1 · https://dashscope.aliyuncs.com/compatible-mode/v1 · http://<电脑IP>:11434/v1 (Ollama, same Wi-Fi)",
+        "label": "API 地址（高级 / 自定义）",
+        "description": "标准服务商会自动填写，无需修改。自定义端点需兼容 /v1/chat/completions；本机服务填写局域网地址。",
         "defaultValue": ""
       },
       {
@@ -93,15 +158,21 @@
         "messageKey": "OPENAI_MODEL",
         "label": "OpenAI-compatible model",
         "description": "Examples: gpt-4o-mini · deepseek-chat · moonshot-v1-8k · qwen-plus · llama3.1",
-        "defaultValue": "gpt-4o-mini"
+        "defaultValue": "deepseek-chat"
       },
       {
         "type": "input",
         "id": "CLAUDE_API_KEY",
         "messageKey": "CLAUDE_API_KEY",
-        "label": "Anthropic Claude API key",
-        "description": "Required when provider is Claude.",
-        "defaultValue": ""
+        "label": "Claude API Key",
+        "description": "仅保存在手机本地。",
+        "defaultValue": "",
+        "attributes": {
+          "type": "password",
+          "autocomplete": "off",
+          "autocapitalize": "off",
+          "spellcheck": "false"
+        }
       },
       {
         "type": "input",
@@ -164,19 +235,45 @@
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Language"
+        "defaultValue": "语言 / Language"
+      },
+      {
+        "type": "select",
+        "id": "UI_LANGUAGE",
+        "messageKey": "UI_LANGUAGE",
+        "label": "手表界面语言 / Watch UI language",
+        "description": "默认简体中文。切换后重新打开 Mica 生效；已内置中文字体，无需安装语言包。",
+        "defaultValue": "1",
+        "options": [
+          {
+            "label": "简体中文",
+            "value": "1"
+          },
+          {
+            "label": "English",
+            "value": "0"
+          }
+        ]
       },
       {
         "type": "select",
         "id": "languageCode",
         "messageKey": "LANGUAGE_CODE",
-        "label": "Response language",
-        "description": "Controls the language of Mica's replies. Does not currently translate the rest of the UI. If 'automatic', Mica will attempt to respond in the same language the question was asked.",
-        "defaultValue": "",
+        "label": "AI 回复语言",
+        "description": "控制 AI 回复语言，Automatic 会跟随提问语言。手表界面语言由上一项单独设置。",
+        "defaultValue": "zh_CN",
         "options": [
           {
-            "label": "Automatic",
+            "label": "Automatic / 自动",
             "value": ""
+          },
+          {
+            "label": "简体中文",
+            "value": "zh_CN"
+          },
+          {
+            "label": "繁體中文",
+            "value": "zh_TW"
           },
           {
             "label": "Afrikaans",

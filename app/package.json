@@ -1,7 +1,7 @@
 {
   "name": "mica",
   "author": "Thomas Bolger and Mica contributors",
-  "version": "0.1",
+  "version": "0.2",
   "keywords": [
     "pebble-app"
   ],
@@ -52,7 +52,8 @@
       }
     ],
     "targetPlatforms": [
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": false
@@ -174,8 +175,10 @@
       "OPENAI_API_KEY",
       "OPENAI_BASE_URL",
       "OPENAI_MODEL",
+      "OPENAI_SERVICE",
       "CLAUDE_API_KEY",
-      "CLAUDE_MODEL"
+      "CLAUDE_MODEL",
+      "UI_LANGUAGE"
     ],
     "resources": {
       "media": [
@@ -206,13 +209,8 @@
           "type": "bitmap"
         },
         {
-          "file": "images/root_screen/pony.png",
-          "name": "ROOT_SCREEN_PONY",
-          "type": "bitmap"
-        },
-        {
-          "file": "images/sleeping_pony.png",
-          "name": "SLEEPING_PONY",
+          "file": "images/mica_mark.png",
+          "name": "MICA_MARK",
           "type": "bitmap"
         },
         {
@@ -246,16 +244,6 @@
           "type": "raw"
         },
         {
-          "file": "animations/tired_pony.pdcs",
-          "name": "TIRED_PONY",
-          "type": "raw"
-        },
-        {
-          "file": "animations/running_pony.pdcs",
-          "name": "RUNNING_PONY",
-          "type": "raw"
-        },
-        {
           "file": "icons/action_bar_snooze.png",
           "name": "ACTION_BAR_SNOOZE",
           "type": "bitmap"
@@ -264,11 +252,6 @@
           "file": "icons/action_bar_x.png",
           "name": "ACTION_BAR_X",
           "type": "bitmap"
-        },
-        {
-          "file": "images/failed_pony.pdc",
-          "name": "FAILED_PONY",
-          "type": "raw"
         },
         {
           "file": "text/legal.txt",
@@ -298,6 +281,11 @@
         {
           "file": "text/licenses/fonts-ofl-1.1.txt",
           "name": "LICENSE_FONTS_OFL_1_1",
+          "type": "raw"
+        },
+        {
+          "file": "text/licenses/noto-cjk-ofl-1.1.txt",
+          "name": "LICENSE_NOTO_CJK_OFL_1_1",
           "type": "raw"
         },
         {
@@ -333,6 +321,46 @@
         {
           "file": "text/sample_prompts.txt",
           "name": "SAMPLE_PROMPTS",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/sample_prompts.txt",
+          "name": "SAMPLE_PROMPTS_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/llm_warning.txt",
+          "name": "LLM_WARNING_TEXT_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/gemini_consent.txt",
+          "name": "GEMINI_CONSENT_TEXT_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/location_consent.txt",
+          "name": "LOCATION_CONSENT_TEXT_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/feedback_blurb.txt",
+          "name": "FEEDBACK_BLURB_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/report_blurb.txt",
+          "name": "REPORT_BLURB_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/about.txt",
+          "name": "ABOUT_TEXT_ZH",
+          "type": "raw"
+        },
+        {
+          "file": "text/zh/legal.txt",
+          "name": "LEGAL_TEXT_ZH",
           "type": "raw"
         },
         {
@@ -426,7 +454,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -444,7 +473,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -462,7 +492,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -480,7 +511,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -498,7 +530,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -516,7 +549,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -534,7 +568,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -577,22 +612,9 @@
           "type": "raw"
         },
         {
-          "file": "images/fence_pony_color.png",
-          "name": "FENCE_PONY_BITMAP",
-          "type": "bitmap",
-          "targetPlatforms": [
-            "basalt",
-            "emery"
-          ]
-        },
-        {
-          "file": "images/fence_pony_bw.png",
-          "name": "FENCE_PONY_BITMAP",
-          "type": "bitmap",
-          "memoryFormat": "1BitPalette",
-          "targetPlatforms": [
-            "diorite"
-          ]
+          "file": "images/mica_mark_about.png",
+          "name": "MICA_MARK_ABOUT",
+          "type": "bitmap"
         },
         {
           "file": "images/skull.pdc",
@@ -610,11 +632,17 @@
           "type": "raw"
         },
         {
+          "file": "fonts/MICA_ZH_20.pbf",
+          "name": "FONT_MICA_ZH_20",
+          "type": "raw"
+        },
+        {
           "file": "fonts/GOTHIC_36.pbf",
           "name": "FONT_GOTHIC_36",
           "type": "raw",
           "targetPlatforms": [
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -622,7 +650,8 @@
           "name": "FONT_GOTHIC_36_BOLD",
           "type": "raw",
           "targetPlatforms": [
-            "emery"
+            "emery",
+            "gabbro"
           ]
         }
       ]

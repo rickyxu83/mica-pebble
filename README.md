@@ -6,7 +6,7 @@ Mica is a bring-your-own-API AI assistant for modern Pebble watches — no Mica 
 
 Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合一的 Pebble AI 助手。面向 **Pebble Time 2（emery）** 与 **Pebble Round 2（gabbro）**。
 
-> **开发预览（v0.1）**：emery 构建和模拟器流程已验证；真机尚未验收。gabbro 圆屏适配和中文 UI 仍在开发，当前不是正式商店发布版。
+> **开发预览（v0.2）**：emery 与 gabbro 的构建和模拟器流程已验证，中文 UI 已内置；真机与语音链路正在验收，当前不是正式商店发布版。
 
 <p>
   <img src="docs/screenshots/mica-emery-main.png" alt="Mica emery 主界面" width="200">
@@ -37,9 +37,10 @@ Mica 在此基础上重点发展 **多 Provider、自定义 OpenAI-compatible En
 |---|---|
 | Pebble Time 2（emery）构建与 PBW 打包 | ✅ 已通过 |
 | emery 模拟器安装、首次启动、主界面与菜单 | ✅ 已通过 |
-| emery 真机与 DeepSeek 实测 | ⏳ 等待设备验收 |
-| Pebble Round 2（gabbro） | 🚧 圆屏适配中，当前构建目标暂未启用 |
-| 中文 UI 与中文提示词 | 🚧 计划中 |
+| emery 真机、语音与 DeepSeek 实测 | 🚧 真机验证中 |
+| Pebble Round 2（gabbro）构建、打包与圆屏模拟器 | ✅ 已通过 |
+| 中文 UI、内置中文字体与中英文切换 | ✅ 已通过 |
+| Provider 模板与高级项折叠设置页 | ✅ 已优化 |
 | Android companion | 可选上游运行时，Mica 独立品牌适配尚未开始 |
 
 ## 下载
@@ -102,9 +103,11 @@ pebble install --phone <手机IP>
 | Ollama | `http://<电脑IP>:11434/v1` | `llama3.1` |
 | Anthropic Claude | 内置，无需填写 | `claude-sonnet-4-5` |
 
-OpenAI-compatible 使用 `/v1/chat/completions`。各家 key、model 和 endpoint 分别保存，切换 Provider 不用重填。自定义公网 Endpoint 需要 Internet 权限；Ollama / LM Studio 等局域网服务需要 LocalNetwork 权限。
+OpenAI-compatible 使用 `/v1/chat/completions`。设置页默认只显示服务商和 Key：选择 DeepSeek、Kimi、Qwen、OpenRouter、Ollama 等模板会自动填入地址和推荐模型；高级端点、模型、Runtime 和反馈项默认折叠。各家 key、model 和 endpoint 分别保存，切换 Provider 不用重填。Key 输入使用密码框。自定义公网 Endpoint 需要 Internet 权限；Ollama / LM Studio 等局域网服务需要 LocalNetwork 权限。
 
 > 不要把 API key 提交到仓库。公网自定义 Endpoint 建议只使用 HTTPS；纯 HTTP 仅限可信局域网。
+
+语音使用系统 Dictation，需手机蓝牙和网络。若手机停用 Usage logs / 语音数据，手表会显示明确提示；未连接、未听到声音或转写失败也有独立错误说明，并可返回使用示例问题。
 
 ## 目录结构
 

@@ -81,12 +81,21 @@ SegmentLayer* segment_layer_create(GRect rect, ConversationEntry* entry, bool as
   data->entry = entry;
   data->type = prv_get_segment_type(entry);
   GRect child_frame = GRect(0, 0, rect.size.w, rect.size.h);
+#if defined(PBL_ROUND)
+  // Text layers apply their own inner inset; offsetting both parent and child
+  // confuses Pebble's nested dirty-region rendering. Cards use a parent inset.
+  if (data->type != SegmentTypeMessage && data->type != SegmentTypeInfo) {
+    child_frame = GRect(24, 0, rect.size.w - 48, rect.size.h);
+  }
+#endif
   if (assistant_label) {
     data->assistant_label_layer = btext_layer_create(GRect(5, 0, rect.size.w, fonts->small_font_cap * 2.25));
     text_layer_set_font(data->assistant_label_layer, fonts->small_font);
     layer_add_child(layer, text_layer_get_layer(data->assistant_label_layer));
     text_layer_set_text(data->assistant_label_layer, "Mica");
-    child_frame = GRect(0, fonts->small_font_cap * 2.25, rect.size.w, rect.size.h - fonts->small_font_cap * 2.25);
+    text_layer_set_text_alignment(data->assistant_label_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
+    child_frame.origin.y = fonts->small_font_cap * 2.25;
+    child_frame.size.h -= fonts->small_font_cap * 2.25;
   } else {
     data->assistant_label_layer = NULL;
   }
@@ -125,7 +134,7 @@ SegmentLayer* segment_layer_create(GRect rect, ConversationEntry* entry, bool as
   }
   layer_add_child(layer, data->layer);
   GSize child_size = layer_get_frame(data->layer).size;
-  GRect final_size = GRect(rect.origin.x, rect.origin.y, child_size.w, child_size.h);
+  GRect final_size = GRect(rect.origin.x, rect.origin.y, rect.size.w, child_size.h);
   if (data->assistant_label_layer) {
     final_size.size.h += fonts->small_font_cap * 2.25;
   }
@@ -218,7 +227,7 @@ void segment_layer_update(SegmentLayer* layer) {
   }
   GSize child_size = layer_get_frame(data->layer).size;
   GPoint origin = layer_get_frame(layer).origin;
-  GRect final_frame = GRect(origin.x, origin.y, child_size.w, child_size.h);
+  GRect final_frame = GRect(origin.x, origin.y, layer_get_frame(layer).size.w, child_size.h);
   if (data->assistant_label_layer) {
     final_frame.size.h += fonts->small_font_cap * 2.25;
   }

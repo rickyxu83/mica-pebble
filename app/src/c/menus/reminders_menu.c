@@ -18,7 +18,10 @@
 #include "reminders_menu.h"
 #include "../util/fonts.h"
 #include "../util/style.h"
-#include "../util/vector_sequence_layer.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
+#include "../util/thinking_layer.h"
 #include "../util/vector_layer.h"
 #include "../util/time.h"
 #include "../util/memory/malloc.h"
@@ -36,8 +39,7 @@ typedef struct {
   Window *window;
   MenuLayer *menu_layer;
   StatusBarLayer *status_bar;
-  VectorSequenceLayer *loading_layer;
-  GDrawCommandSequence *loading_sequence;
+  ThinkingLayer *loading_layer;
   TextLayer *empty_text_layer;
   GBitmap *sleeping_horse_image;
   BitmapLayer *sleeping_horse_layer;
@@ -49,6 +51,7 @@ typedef struct {
 } RemindersMenuData;
 
 static void prv_window_load(Window *window);
+static void prv_window_appear(Window *window);
 static void prv_window_unload(Window *window);
 static void prv_fetch_reminders(Window *window);
 static void prv_app_message_received(DictionaryIterator *iter, void *context);
@@ -67,9 +70,10 @@ void reminders_menu_push() {
   window_set_user_data(window, data);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = prv_window_load,
+    .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 static void prv_show_empty(Window *window) {
@@ -81,7 +85,6 @@ static void prv_show_empty(Window *window) {
   // Remove the menu and loading animation if present
   layer_remove_from_parent(menu_layer_get_layer(data->menu_layer));
   if (data->loading_layer) {
-    vector_sequence_layer_stop(data->loading_layer);
     layer_remove_from_parent(data->loading_layer);
   }
   window_set_click_config_provider(window, NULL);
@@ -93,13 +96,13 @@ static void prv_show_empty(Window *window) {
     text_layer_set_background_color(data->empty_text_layer, GColorClear);
     text_layer_set_font(data->empty_text_layer, fonts->title_font);
     text_layer_set_text_alignment(data->empty_text_layer, GTextAlignmentCenter);
-    text_layer_set_text(data->empty_text_layer, "No reminders.\nAsk Mica to set some.");
+    text_layer_set_text(data->empty_text_layer, S(STR_NO_REMINDERS));
   }
 
   // Create sleeping horse if not exists
   if (!data->sleeping_horse_image) {
-    data->sleeping_horse_image = bgbitmap_create_with_resource(RESOURCE_ID_SLEEPING_PONY);
-    data->sleeping_horse_layer = bbitmap_layer_create(GRect(bounds.size.w / 2 - 25, bounds.size.h - 55, 50, 50));
+    data->sleeping_horse_image = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
+    data->sleeping_horse_layer = bbitmap_layer_create(GRect(bounds.size.w / 2 - 32, bounds.size.h - 88, 64, 64));
     bitmap_layer_set_bitmap(data->sleeping_horse_layer, data->sleeping_horse_image);
     bitmap_layer_set_background_color(data->sleeping_horse_layer, GColorClear);
     bitmap_layer_set_compositing_mode(data->sleeping_horse_layer, GCompOpSet);
@@ -132,21 +135,24 @@ static void prv_window_load(Window *window) {
   });
   menu_layer_set_highlight_colors(data->menu_layer, SELECTION_HIGHLIGHT_COLOUR, 
     gcolor_legible_over(SELECTION_HIGHLIGHT_COLOUR));
+  mica_round_menu(data->menu_layer);
 
   // Show loading animation
-  data->loading_sequence = bgdraw_command_sequence_create_with_resource(RESOURCE_ID_RUNNING_PONY);
-  GSize pony_size = gdraw_command_sequence_get_bounds_size(data->loading_sequence);
-  data->loading_layer = vector_sequence_layer_create(GRect(
-    bounds.size.w / 2 - pony_size.w / 2,
-    bounds.size.h / 2 - pony_size.h / 2,
-    pony_size.w, pony_size.h));
-  vector_sequence_layer_set_sequence(data->loading_layer, data->loading_sequence);
+  data->loading_layer = thinking_layer_create(GRect(
+    bounds.size.w / 2 - THINKING_LAYER_WIDTH / 2,
+    bounds.size.h / 2 - THINKING_LAYER_HEIGHT / 2,
+    THINKING_LAYER_WIDTH, THINKING_LAYER_HEIGHT));
   layer_add_child(root_layer, data->loading_layer);
-  vector_sequence_layer_play(data->loading_layer);
 
   data->loading = true;
   data->app_message_handle = events_app_message_register_inbox_received(prv_app_message_received, window);
   prv_fetch_reminders(window);
+}
+
+static void prv_window_appear(Window *window) {
+  RemindersMenuData *data = window_get_user_data(window);
+  mica_animate_window_push(window);
+  mica_page_status_bar_colors(data->status_bar);
 }
 
 static void prv_window_unload(Window *window) {
@@ -154,8 +160,7 @@ static void prv_window_unload(Window *window) {
   menu_layer_destroy(data->menu_layer);
   status_bar_layer_destroy(data->status_bar);
   if (data->loading_layer) {
-    vector_sequence_layer_destroy(data->loading_layer);
-    gdraw_command_sequence_destroy(data->loading_sequence);
+    thinking_layer_destroy(data->loading_layer);
   }
   if (data->empty_text_layer) {
     text_layer_destroy(data->empty_text_layer);
@@ -227,7 +232,6 @@ static void prv_app_message_received(DictionaryIterator *iter, void *context) {
       window_set_background_color(window, GColorWhite);
       bobby_status_bar_config(data->status_bar);
       data->loading = false;
-      vector_sequence_layer_stop(data->loading_layer);
       layer_remove_from_parent(data->loading_layer);
       layer_add_child(root_layer, menu_layer_get_layer(data->menu_layer));
       menu_layer_set_click_config_onto_window(data->menu_layer, window);

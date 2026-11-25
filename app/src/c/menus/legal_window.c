@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +18,9 @@
 #include "legal_window.h"
 #include <pebble.h>
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/formatted_text_layer.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
@@ -29,6 +33,7 @@ typedef struct {
 } CreditsWindowData;
 
 static void prv_window_load(Window* window);
+static void prv_window_appear(Window* window);
 static void prv_window_unload(Window* window);
 
 void legal_window_push() {
@@ -38,14 +43,15 @@ void legal_window_push() {
  window_set_user_data(window, data);
  window_set_window_handlers(window, (WindowHandlers) {
    .load = prv_window_load,
+   .appear = prv_window_appear,
    .unload = prv_window_unload,
  });
- window_stack_push(window, true);
+ window_stack_push(window, false);
 }
 
 static void prv_window_load(Window* window) {
  CreditsWindowData *data = window_get_user_data(window);
- ResHandle res_handle = resource_get_handle(RESOURCE_ID_LEGAL_TEXT);
+ ResHandle res_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_LEGAL_TEXT_ZH : RESOURCE_ID_LEGAL_TEXT);
  size_t res_size = resource_size(res_handle);
  data->legal_text = bmalloc(res_size + 1);
  resource_load(res_handle, (uint8_t*)data->legal_text, res_size);
@@ -61,9 +67,17 @@ static void prv_window_load(Window* window) {
  layer_add_child(root_layer, scroll_layer_get_layer(data->scroll_layer));
  data->text_layer = formatted_text_layer_create(GRect(5, 0, window_bounds.size.w - 10, 10000));
  formatted_text_layer_set_text(data->text_layer, data->legal_text);
+ scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
+ mica_round_scroll(data->scroll_layer);
+ formatted_text_layer_enable_round_layout(data->text_layer);
  GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
  scroll_layer_set_content_size(data->scroll_layer, GSize(window_bounds.size.w, text_size.h + 10));
- scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
+}
+
+static void prv_window_appear(Window* window) {
+ CreditsWindowData *data = window_get_user_data(window);
+ mica_animate_window_push(window);
+ mica_page_status_bar_colors(data->status_bar);
 }
 
 static void prv_window_unload(Window* window) {

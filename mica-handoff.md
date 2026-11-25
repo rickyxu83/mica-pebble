@@ -1,5 +1,7 @@
 # Handoff: Mica（云母，Pebble 三合一 AI 助手）
 
+> 2026-11-25 最新：v0.2 已完成双平台模拟器、原创单色 M 图标、中文 UI/内置字体、中心缩放与页面换色，以及 Provider 模板化设置页。真机已开始验收；Dictation 增加 NULL/连接/Usage logs/无语音等明确错误提示。旧动画预览、猫/晶体和折纸资源已清理。
+
 > 更新：2026-11-20。项目名已从暂定 Wrist 定为 **Mica**。下一步优先 **emery 真机安装 + DeepSeek 实测**，然后恢复 gabbro target 并做圆屏适配、中文化。
 
 ## 一句话背景

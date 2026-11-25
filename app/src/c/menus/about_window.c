@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +20,9 @@
 #include <pebble.h>
 
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/formatted_text_layer.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
@@ -34,6 +38,7 @@ typedef struct {
 } AboutWindowData;
 
 static void prv_window_load(Window* window);
+static void prv_window_appear(Window* window);
 static void prv_window_unload(Window* window);
 
 void about_window_push() {
@@ -43,9 +48,10 @@ void about_window_push() {
   window_set_user_data(window, data);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = prv_window_load,
+    .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
- window_stack_push(window, true);
+ window_stack_push(window, false);
 }
 
 static void prv_window_load(Window* window) {
@@ -53,7 +59,7 @@ static void prv_window_load(Window* window) {
   Layer *root_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(root_layer);
 
-  ResHandle res_handle = resource_get_handle(RESOURCE_ID_ABOUT_TEXT);
+  ResHandle res_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_ABOUT_TEXT_ZH : RESOURCE_ID_ABOUT_TEXT);
   size_t res_size = resource_size(res_handle);
   char *about_text = bmalloc(res_size + 1);
   resource_load(res_handle, (uint8_t*)about_text, res_size);
@@ -77,15 +83,15 @@ static void prv_window_load(Window* window) {
   data->text_layer = formatted_text_layer_create(GRect(5, 0, window_bounds.size.w - 10, 10000));
   formatted_text_layer_set_text_alignment(data->text_layer, GTextAlignmentCenter);
   formatted_text_layer_set_text(data->text_layer, data->about_text);
+  scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
+  mica_round_scroll(data->scroll_layer);
+  // Recalculate after joining the window so round screen flow uses real coordinates.
+  formatted_text_layer_enable_round_layout(data->text_layer);
   GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
 
-  data->bobby_image = bgbitmap_create_with_resource(RESOURCE_ID_FENCE_PONY_BITMAP);
+  data->bobby_image = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK_ABOUT);
   GSize image_size = gbitmap_get_bounds(data->bobby_image).size;
-#if PBL_DISPLAY_WIDTH >= 200
-  image_size.h += 108; // add back the space at the top
-#else
-  image_size.h += 52; // add back the space at the top
-#endif
+  image_size.h += 20;
   data->bitmap_layer = bitmap_layer_create(GRect((window_bounds.size.w - image_size.w) / 2, text_size.h, image_size.w, image_size.h));
   bitmap_layer_set_bitmap(data->bitmap_layer, data->bobby_image);
   bitmap_layer_set_alignment(data->bitmap_layer, GAlignBottom);
@@ -93,8 +99,13 @@ static void prv_window_load(Window* window) {
   bitmap_layer_set_compositing_mode(data->bitmap_layer, GCompOpSet);
 
   scroll_layer_set_content_size(data->scroll_layer, GSize(window_bounds.size.w, text_size.h + image_size.h));
-  scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
   scroll_layer_add_child(data->scroll_layer, bitmap_layer_get_layer(data->bitmap_layer));
+}
+
+static void prv_window_appear(Window* window) {
+  AboutWindowData *data = window_get_user_data(window);
+  mica_animate_window_push(window);
+  mica_page_status_bar_colors(data->status_bar);
 }
 
 static void prv_window_unload(Window* window) {

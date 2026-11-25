@@ -1,0 +1,19 @@
+# 法律信息
+## AI 服务
+Mica 将你的问题及相关上下文从手机发送到你选择的 AI Provider 或自定义端点，不提供 Mica 托管 AI 服务。第三方条款和隐私政策适用。
+
+## 天气
+天气数据来自 Open-Meteo.com，采用 CC BY 4.0。Mica 将结果转换为简短文字和手表卡片。
+https://open-meteo.com/
+免费 API 仅限非商业用途并有限流。
+
+## 地理编码与地图
+地图数据 © OpenStreetMap contributors，采用 ODbL 1.0。
+https://www.openstreetmap.org/copyright
+使用 Nominatim 和 staticmap.openstreetmap.de，服务政策适用。
+
+## 免责声明
+AI 回答可能不准确。不要依赖 Mica 作出医疗、法律、金融或其他专业决定。
+
+## 开源
+Mica 基于 Billy 和 Bobby / Tiny Assistant，包含第三方软件、字体与图标。完整许可证已作为 text/licenses/ 资源打包进 PBW。

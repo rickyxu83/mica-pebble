@@ -19,12 +19,14 @@
 #include <pebble-events/pebble-events.h>
 
 #include "root_window.h"
-#include "talking_horse_layer.h"
 #include "converse/session_window.h"
 #include "menus/root_menu.h"
+#include "menus/prompt_menu.h"
 #include "util/logging.h"
 #include "util/style.h"
 #include "util/time.h"
+#include "util/i18n.h"
+#include "util/fonts.h"
 #include "util/memory/malloc.h"
 #include "util/memory/sdk.h"
 #include "version/version.h"
@@ -40,14 +42,19 @@ struct RootWindow {
   GBitmap* dictation_icon;
   GBitmap* more_icon;
   TextLayer* time_layer;
+  TextLayer* brand_layer;
+  TextLayer* greeting_layer;
   TextLayer* version_layer;
-  TalkingHorseLayer* talking_horse_layer;
+  BitmapLayer* mascot_layer;
+  GBitmap* mascot;
+  AppTimer* mascot_timer;
+  int16_t mascot_base_y;
+  bool mascot_lifted;
   EventHandle event_handle;
   EventHandle app_message_handle;
   char time_string[6];
   char version_string[9];
-  char** sample_prompts;
-  bool talking_horse_overridden;
+  bool greeting_overridden;
 };
 
 static void prv_window_load(Window* window);
@@ -59,10 +66,9 @@ static void prv_more_clicked(ClickRecognizerRef recognizer, void* context);
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_time_changed(struct tm *tick_time, TimeUnits time_changed, void *context);
 static int prv_load_suggestions(char*** suggestions);
-static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem *performed_action, void *context);
-static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_app_message_handler(DictionaryIterator *iter, void *context);
 static void prv_send_watch_ready(void);
+static void prv_animate_mascot(void *context);
 
 RootWindow* root_window_create() {
   RootWindow* rw = bmalloc(sizeof(RootWindow));
@@ -114,7 +120,9 @@ static void prv_window_appear(Window* window) {
 #else
   uint16_t time_height = 40;
 #endif
-  rw->time_layer = btext_layer_create(GRect(0, 5, bounds.size.w - ACTION_BAR_WIDTH, time_height));
+  int16_t content_width = bounds.size.w - ACTION_BAR_WIDTH;
+  int16_t time_y = PBL_IF_ROUND_ELSE(10, 5);
+  rw->time_layer = btext_layer_create(GRect(0, time_y, content_width, time_height));
   text_layer_set_text_alignment(rw->time_layer, GTextAlignmentCenter);
 #if PBL_DISPLAY_WIDTH >= 200
   text_layer_set_font(rw->time_layer, fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS));
@@ -124,20 +132,41 @@ static void prv_window_appear(Window* window) {
   text_layer_set_text(rw->time_layer, "12:34");
   text_layer_set_background_color(rw->time_layer, GColorClear);
   layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->time_layer);
-  rw->talking_horse_layer = talking_horse_layer_create(GRect(0, time_height + 16, bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h - time_height - 16));
-  layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->talking_horse_layer);
-  rw->talking_horse_overridden = false;
+  rw->brand_layer = btext_layer_create(GRect(0, time_y + time_height, content_width, 20));
+  text_layer_set_font(rw->brand_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  text_layer_set_text_alignment(rw->brand_layer, GTextAlignmentCenter);
+  text_layer_set_background_color(rw->brand_layer, GColorClear);
+  text_layer_set_text(rw->brand_layer, "MICA");
+  layer_add_child(window_get_root_layer(rw->window), text_layer_get_layer(rw->brand_layer));
+
+  rw->mascot_base_y = time_y + time_height + 24;
+  rw->mascot = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
+  rw->mascot_layer = bbitmap_layer_create(GRect((content_width - 64) / 2, rw->mascot_base_y, 64, 64));
+  bitmap_layer_set_bitmap(rw->mascot_layer, rw->mascot);
+  bitmap_layer_set_background_color(rw->mascot_layer, GColorClear);
+  bitmap_layer_set_compositing_mode(rw->mascot_layer, GCompOpSet);
+  layer_add_child(window_get_root_layer(rw->window), bitmap_layer_get_layer(rw->mascot_layer));
+
+  int16_t greeting_inset = PBL_IF_ROUND_ELSE(24, 8);
+  rw->greeting_layer = btext_layer_create(GRect(greeting_inset, rw->mascot_base_y + 72,
+      content_width - greeting_inset * 2, PBL_IF_ROUND_ELSE(62, 52)));
+  text_layer_set_font(rw->greeting_layer, fonts_get_config()->title_font);
+  text_layer_set_text_alignment(rw->greeting_layer, GTextAlignmentCenter);
+  text_layer_set_overflow_mode(rw->greeting_layer, GTextOverflowModeWordWrap);
+  text_layer_set_background_color(rw->greeting_layer, GColorClear);
+  layer_add_child(window_get_root_layer(rw->window), text_layer_get_layer(rw->greeting_layer));
+  rw->greeting_overridden = false;
   if (version_is_updated() || rand() < RAND_MAX / 10) {
-    rw->talking_horse_overridden = true;
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Try holding select in chat!");
+    rw->greeting_overridden = true;
+    text_layer_set_text(rw->greeting_layer, S(STR_HOLD_SELECT));
   }
 
   VersionInfo version_info = version_get_current();
   snprintf(rw->version_string, sizeof(rw->version_string), "v%d.%d", version_info.major, version_info.minor);
   rw->version_string[sizeof(rw->version_string) - 1] = '\0';
-  rw->version_layer = btext_layer_create(GRect(0, bounds.size.h - 18, bounds.size.w - ACTION_BAR_WIDTH - 4, 18));
+  rw->version_layer = btext_layer_create(GRect(0, bounds.size.h - PBL_IF_ROUND_ELSE(22, 18), content_width - 4, 18));
   text_layer_set_font(rw->version_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(rw->version_layer, GTextAlignmentRight);
+  text_layer_set_text_alignment(rw->version_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentRight));
   text_layer_set_background_color(rw->version_layer, GColorClear);
   text_layer_set_text(rw->version_layer, rw->version_string);
   layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->version_layer);
@@ -152,12 +181,26 @@ static void prv_window_appear(Window* window) {
     rw->app_message_handle = events_app_message_register_inbox_received(prv_app_message_handler, rw);
   }
   prv_send_watch_ready();
+  rw->mascot_timer = app_timer_register(650, prv_animate_mascot, rw);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window appeared. Heap usage increased %d bytes", heap_size - heap_bytes_free());
+}
+
+static void prv_animate_mascot(void *context) {
+  RootWindow *rw = context;
+  rw->mascot_lifted = !rw->mascot_lifted;
+  GRect frame = layer_get_frame(bitmap_layer_get_layer(rw->mascot_layer));
+  frame.origin.y = rw->mascot_base_y + (rw->mascot_lifted ? -2 : 0);
+  layer_set_frame(bitmap_layer_get_layer(rw->mascot_layer), frame);
+  rw->mascot_timer = app_timer_register(650, prv_animate_mascot, rw);
 }
 
 static void prv_window_disappear(Window* window) {
   size_t heap_size = heap_bytes_free();
   RootWindow* rw = window_get_user_data(window);
+  if (rw->mascot_timer) {
+    app_timer_cancel(rw->mascot_timer);
+    rw->mascot_timer = NULL;
+  }
   if (rw->event_handle) {
     events_tick_timer_service_unsubscribe(rw->event_handle);
     rw->event_handle = NULL;
@@ -170,8 +213,11 @@ static void prv_window_disappear(Window* window) {
   gbitmap_destroy(rw->dictation_icon);
   gbitmap_destroy(rw->more_icon);
   text_layer_destroy(rw->time_layer);
+  text_layer_destroy(rw->brand_layer);
+  text_layer_destroy(rw->greeting_layer);
   text_layer_destroy(rw->version_layer);
-  talking_horse_layer_destroy(rw->talking_horse_layer);
+  bitmap_layer_destroy(rw->mascot_layer);
+  gbitmap_destroy(rw->mascot);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window disappeared. Heap usage decreased %d bytes", heap_bytes_free() - heap_size);
 }
 
@@ -182,8 +228,8 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
     return;
   }
   if (tuple->value->int32 == 1) {
-    rw->talking_horse_overridden = true;
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Cobble has many Mica bugs.");
+    rw->greeting_overridden = true;
+    text_layer_set_text(rw->greeting_layer, "Cobble has many Mica bugs.");
     window_set_background_color(rw->window, COLOR_FALLBACK(GColorRed, GColorDarkGray));
     vibe_haptic_feedback();
   }
@@ -203,17 +249,17 @@ static void prv_time_changed(struct tm *tick_time, TimeUnits time_changed, void 
   RootWindow* rw = context;
   format_time(rw->time_string, sizeof(rw->time_string), tick_time);
   text_layer_set_text(rw->time_layer, rw->time_string);
-  if (rw->talking_horse_overridden) {
+  if (rw->greeting_overridden) {
     return;
   }
   if (tick_time->tm_hour >= 6 && tick_time->tm_hour < 12) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good morning!");
+    text_layer_set_text(rw->greeting_layer, S(STR_GOOD_MORNING));
   } else if (tick_time->tm_hour >= 12 && tick_time->tm_hour < 18) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good afternoon!");
+    text_layer_set_text(rw->greeting_layer, S(STR_GOOD_AFTERNOON));
   } else if (tick_time->tm_hour >= 18 && tick_time->tm_hour < 22) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good evening!");
+    text_layer_set_text(rw->greeting_layer, S(STR_GOOD_EVENING));
   } else {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Hey there, night owl!");
+    text_layer_set_text(rw->greeting_layer, S(STR_GOOD_NIGHT));
   }
 }
 
@@ -224,39 +270,9 @@ static void prv_click_config_provider(void *context) {
 }
 
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context) {
-  RootWindow* rw = context;
-  // talking_horse_layer_set_text(rw->talking_horse_layer, "I'm doing thanks! How help?");
   char **suggestions;
   int count = prv_load_suggestions(&suggestions);
-  ActionMenuLevel *level = baction_menu_level_create(count);
-  for (int i = 0; i < count; ++i) {
-    action_menu_level_add_action(level, suggestions[i], prv_suggestion_clicked, rw);
-  }
-  ActionMenuConfig config = (ActionMenuConfig) {
-    .root_level = level,
-    .colors = {
-      .background = BRANDED_BACKGROUND_COLOUR,
-      .foreground = gcolor_legible_over(BRANDED_BACKGROUND_COLOUR),
-    },
-    .align = ActionMenuAlignTop,
-    .context = rw,
-    .did_close = prv_action_menu_closed,
-  };
-  rw->sample_prompts = suggestions;
-  action_menu_open(&config);
-}
-
-static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem *performed_action, void *context) {
-  RootWindow* rw = context;
-  action_menu_hierarchy_destroy(action_menu_get_root_level(action_menu), NULL, NULL);
-  // memory is allocated for sample_prompts[0], but not the rest of the entries - so just free the first one.
-  free(rw->sample_prompts[0]);
-  free(rw->sample_prompts);
-}
-
-static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
-  char* suggestion = action_menu_item_get_label(action);
-  session_window_push(0, suggestion);
+  prompt_menu_push(suggestions, count);
 }
 
 static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context) {
@@ -268,7 +284,7 @@ static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
 }
 
 static int prv_load_suggestions(char*** suggestions) {
-  ResHandle handle = resource_get_handle(RESOURCE_ID_SAMPLE_PROMPTS);
+  ResHandle handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_SAMPLE_PROMPTS_ZH : RESOURCE_ID_SAMPLE_PROMPTS);
   size_t size = resource_size(handle);
   char* buffer = bmalloc(size);
   resource_load(handle, (uint8_t*)buffer, size);

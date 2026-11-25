@@ -1,5 +1,11 @@
+/*
+ * Copyright 2026 Mica contributors.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
 #include <pebble.h>
 #include "fonts.h"
+#include "i18n.h"
 
 typedef struct {
   const char *title_font;
@@ -55,6 +61,16 @@ FontsSpec s_specs[] = {
   },
 #if defined(RESOURCE_ID_FONT_GOTHIC_36)
   [PreferredContentSizeExtraLarge] = {
+#if defined(PBL_ROUND)
+    // Gabbro needs a narrower text column, so use 28px body text rather than
+    // Emery's 36px face. The home-screen mascot can still use the large font.
+    .title_font = FONT_KEY_GOTHIC_28_BOLD,
+    .title_font_cap = 18,
+    .text_font = FONT_KEY_GOTHIC_28,
+    .text_font_cap = 18,
+    .small_font = FONT_KEY_GOTHIC_24_BOLD,
+    .small_font_cap = 14,
+#else
     .title_font = NULL,
     .title_font_custom = RESOURCE_ID_FONT_GOTHIC_36_BOLD,
     .title_font_cap = 22,
@@ -63,6 +79,7 @@ FontsSpec s_specs[] = {
     .text_font_cap = 22,
     .small_font = FONT_KEY_GOTHIC_28_BOLD,
     .small_font_cap = 18,
+#endif
     .content_font = FONT_KEY_LECO_42_NUMBERS,
     .content_font_cap = 29,
     .small_content_font = FONT_KEY_LECO_32_BOLD_NUMBERS,
@@ -72,6 +89,7 @@ FontsSpec s_specs[] = {
 };
 
 static FontsConfig s_config;
+static bool s_chinese_font_loaded;
 
 static GFont prv_load_font(const char *system_key, uint32_t resource_id) {
   if (system_key) {
@@ -87,6 +105,7 @@ static void prv_unload_font(const char *system_key, GFont font) {
 }
 
 void fonts_load(void) {
+  s_chinese_font_loaded = false;
   const FontsSpec *spec = &s_specs[preferred_content_size()];
   s_config = (FontsConfig) {
     .title_font = prv_load_font(spec->title_font, spec->title_font_custom),
@@ -100,9 +119,30 @@ void fonts_load(void) {
     .small_content_font = fonts_get_system_font(spec->small_content_font),
     .small_content_font_cap = spec->small_content_font_cap,
   };
+  if (i18n_is_chinese()) {
+    if (!spec->title_font) {
+      fonts_unload_custom_font(s_config.title_font);
+    }
+    if (!spec->text_font) {
+      fonts_unload_custom_font(s_config.text_font);
+    }
+    GFont chinese = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_MICA_ZH_20));
+    s_config.title_font = chinese;
+    s_config.title_font_cap = 20;
+    s_config.text_font = chinese;
+    s_config.text_font_cap = 20;
+    s_config.small_font = chinese;
+    s_config.small_font_cap = 20;
+    s_chinese_font_loaded = true;
+  }
 }
 
 void fonts_unload(void) {
+  if (s_chinese_font_loaded) {
+    fonts_unload_custom_font(s_config.title_font);
+    s_chinese_font_loaded = false;
+    return;
+  }
   const FontsSpec *spec = &s_specs[preferred_content_size()];
   prv_unload_font(spec->title_font, s_config.title_font);
   prv_unload_font(spec->text_font, s_config.text_font);

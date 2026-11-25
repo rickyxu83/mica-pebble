@@ -18,6 +18,9 @@
 #include "../util/fonts.h"
 #include "../util/persist_keys.h"
 #include "../util/style.h"
+#include "../util/round.h"
+#include "../util/transition.h"
+#include "../util/i18n.h"
 #include "../util/logging.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
@@ -71,7 +74,7 @@ void consent_window_push() {
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
 }
 
 bool must_present_consent() {
@@ -113,6 +116,7 @@ static void prv_window_load(Window *window) {
   data->select_indicator_bitmap = bgbitmap_create_with_resource(RESOURCE_ID_BUTTON_INDICATOR);
   GRect select_indicator_size = gbitmap_get_bounds(data->select_indicator_bitmap);
   grect_align(&select_indicator_size, &window_bounds, GAlignRight, false);
+  mica_round_action_indicator(&select_indicator_size);
   data->select_indicator_layer = bbitmap_layer_create(select_indicator_size);
   bitmap_layer_set_bitmap(data->select_indicator_layer, data->select_indicator_bitmap);
   bitmap_layer_set_compositing_mode(data->select_indicator_layer, GCompOpSet);
@@ -134,6 +138,7 @@ static void prv_window_load(Window *window) {
   scroll_layer_add_child(data->scroll_layer, (Layer *) data->title_layer);
   scroll_layer_add_child(data->scroll_layer, (Layer *) data->text_layer);
   layer_add_child(root_layer, data->content_indicator_layer);
+  mica_round_scroll_text(data->text_layer, data->scroll_layer);
   scroll_layer_set_callbacks(data->scroll_layer, (ScrollLayerCallbacks) {
     .click_config_provider = prv_click_config_provider,
   });
@@ -147,6 +152,7 @@ static void prv_click_config_provider(void *context) {
 
 
 static void prv_window_appear(Window *window) {
+  mica_animate_window_push(window);
   prv_set_stage(window, STAGE_LLM_WARNING);
 }
 
@@ -170,16 +176,16 @@ static void prv_set_stage(Window* window, int stage) {
   ResHandle res_handle = NULL;
   switch (stage) {
   case STAGE_LLM_WARNING:
-    res_handle = resource_get_handle(RESOURCE_ID_LLM_WARNING_TEXT);
-    data->title_text = "Important";
+    res_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_LLM_WARNING_TEXT_ZH : RESOURCE_ID_LLM_WARNING_TEXT);
+    data->title_text = S(STR_IMPORTANT);
     break;
   case STAGE_GEMINI_CONSENT:
-    res_handle = resource_get_handle(RESOURCE_ID_GEMINI_CONSENT_TEXT);
-    data->title_text = "Privacy";
+    res_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_GEMINI_CONSENT_TEXT_ZH : RESOURCE_ID_GEMINI_CONSENT_TEXT);
+    data->title_text = S(STR_PRIVACY);
     break;
   case STAGE_LOCATION_CONSENT:
-    res_handle = resource_get_handle(RESOURCE_ID_LOCATION_CONSENT_TEXT);
-    data->title_text = "Location";
+    res_handle = resource_get_handle(i18n_is_chinese() ? RESOURCE_ID_LOCATION_CONSENT_TEXT_ZH : RESOURCE_ID_LOCATION_CONSENT_TEXT);
+    data->title_text = S(STR_LOCATION);
     break;
   default:
     BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Unknown consent stage: %d", stage);

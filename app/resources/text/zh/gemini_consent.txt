@@ -1,0 +1,1 @@
+选择 Gemini 时，Mica 会使用你填写的 Gemini API Key。问题由手机直接发送给 Google Gemini，不经过 Mica 服务器。可选的 Android 增强模式会通过 companion 处理请求。如果不同意，请选择其他 Provider 或停止使用。

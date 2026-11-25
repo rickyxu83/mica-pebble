@@ -1,5 +1,6 @@
 /*
  * Copyright 2025 Google LLC
+ * Modified in 2026 for Mica.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +32,7 @@ static void prv_layer_update(Layer *layer, GContext *ctx);
 
 WeatherMultiDayWidget* weather_multi_day_widget_create(GRect rect, ConversationEntry* entry) {
   const FontsConfig *fonts = fonts_get_config();
-  int layer_height = fonts->title_font_cap * 1.5 + fonts->small_font_cap * 1.5 + 36 + fonts->small_content_font_cap * 3.5;
+  int layer_height = fonts->title_font_cap * 1.5 + fonts->small_font_cap * 3 + 36 + fonts->small_content_font_cap * 3.5;
   Layer *layer = blayer_create_with_data(GRect(rect.origin.x, rect.origin.y, rect.size.w, layer_height), sizeof(WeatherMultiDayWidgetData));
   WeatherMultiDayWidgetData *data = layer_get_data(layer);
   ConversationWidgetWeatherMultiDay *w = &conversation_entry_get_widget(entry)->widget.weather_multi_day;
@@ -82,6 +83,10 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
     y += fonts->small_content_font_cap * 1.5;
     graphics_draw_text(ctx, data->rendered_lows[i], fonts->small_content_font, GRect(x+2, y, SEGMENT_WIDTH, fonts->small_content_font_cap * 1.75), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
   }
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx, "Open-Meteo", fonts->small_font,
+      GRect(2, bounds.size.h - fonts->small_font_cap * 1.5, bounds.size.w - 4, fonts->small_font_cap * 1.5),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 
 ConversationEntry* weather_multi_day_widget_get_entry(WeatherMultiDayWidget* layer) {

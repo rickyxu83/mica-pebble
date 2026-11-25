@@ -17,11 +17,18 @@
 
 #include "message_layer.h"
 #include "../../util/fonts.h"
+#include "../../util/formatted_text_layer.h"
+#include "../../util/i18n.h"
 #include "../../util/memory/sdk.h"
 #include "../../util/logging.h"
 
 #include <pebble.h>
 
+#if defined(PBL_ROUND)
+#define CONTENT_PADDING 0
+#else
+#define CONTENT_PADDING 5
+#endif
 
 typedef struct {
   ConversationEntry* entry;
@@ -31,42 +38,69 @@ typedef struct {
   uint16_t content_height;
   size_t last_newline_offset;
   bool rich_content;
+#if defined(PBL_ROUND)
+  FormattedTextLayer *formatted_content_layer;
+  char *plain_text;
+  size_t plain_text_capacity;
+#endif
 } MessageLayerData;
 
 static char *prv_get_content_text(MessageLayer *layer);
 static int prv_get_content_height(MessageLayer* layer);
 static void prv_rich_content_update(Layer *content_layer, GContext *ctx);
 static int prv_rich_layout(MessageLayer *layer, GContext *ctx);
+#if defined(PBL_ROUND)
+static char *prv_round_plain_text(MessageLayerData *data, const char *text);
+#endif
 
 MessageLayer* message_layer_create(GRect rect, ConversationEntry* entry) {
     Layer* layer = blayer_create_with_data(rect, sizeof(MessageLayerData));
     MessageLayerData* data = layer_get_data(layer);
     const FontsConfig *fonts = fonts_get_config();
     data->entry = entry;
-    data->speaker_layer = btext_layer_create(GRect(5, 0, rect.size.w, fonts->small_font_cap * 1.75));
+    data->speaker_layer = btext_layer_create(GRect(0, 0, rect.size.w, fonts->small_font_cap * 1.75));
+    text_layer_set_text_alignment(data->speaker_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
     size_t content_origin_y = -5;
     EntryType type = conversation_entry_get_type(entry);
     if (type == EntryTypePrompt) {
-      text_layer_set_text(data->speaker_layer, "You");
+      text_layer_set_text(data->speaker_layer, S(STR_YOU));
       content_origin_y = fonts->small_font_cap * 1.75;
     }
+#if defined(PBL_ROUND)
+    // The streaming token renderer leaves stale glyphs when its narrow round
+    // layer reflows. System text layout is stable and also handles CJK better.
+    data->rich_content = false;
+    data->plain_text = NULL;
+    data->plain_text_capacity = 0;
+#else
     data->rich_content = type == EntryTypeResponse;
+#endif
     text_layer_set_font(data->speaker_layer, fonts->small_font);
     layer_add_child(layer, (Layer *)data->speaker_layer);
     data->last_newline_offset = 0;
     data->content_height = prv_get_content_height(layer);
     if (data->rich_content) {
-      data->content_layer = blayer_create_with_data(GRect(5, content_origin_y, rect.size.w - 10, data->content_height), sizeof(MessageLayer*));
+      data->content_layer = blayer_create_with_data(GRect(CONTENT_PADDING, content_origin_y, rect.size.w - CONTENT_PADDING * 2, data->content_height), sizeof(MessageLayer*));
       MessageLayer **parent = layer_get_data(data->content_layer);
       *parent = layer;
       layer_set_update_proc(data->content_layer, prv_rich_content_update);
       data->content_text_layer = NULL;
     } else {
-      data->content_text_layer = btext_layer_create(GRect(5, content_origin_y, rect.size.w - 10, data->content_height));
+#if defined(PBL_ROUND)
+      data->content_text_layer = NULL;
+      data->formatted_content_layer = formatted_text_layer_create(GRect(0, content_origin_y, rect.size.w, data->content_height));
+      formatted_text_layer_set_body_font(data->formatted_content_layer, fonts->text_font);
+      formatted_text_layer_set_text(data->formatted_content_layer, prv_get_content_text(layer));
+      formatted_text_layer_enable_round_layout(data->formatted_content_layer);
+      data->content_height = formatted_text_layer_get_content_size(data->formatted_content_layer).h;
+      data->content_layer = formatted_text_layer_get_layer(data->formatted_content_layer);
+#else
+      data->content_text_layer = btext_layer_create(GRect(CONTENT_PADDING, content_origin_y, rect.size.w - CONTENT_PADDING * 2, data->content_height));
       text_layer_set_text(data->content_text_layer, prv_get_content_text(layer));
       text_layer_set_font(data->content_text_layer, fonts->text_font);
       data->content_height = text_layer_get_content_size(data->content_text_layer).h;
       data->content_layer = text_layer_get_layer(data->content_text_layer);
+#endif
     }
     layer_add_child(layer, data->content_layer);
     message_layer_update(layer);
@@ -78,32 +112,76 @@ void message_layer_destroy(MessageLayer* layer) {
   if (data->speaker_layer) {
     text_layer_destroy(data->speaker_layer);
   }
+#if defined(PBL_ROUND)
+  formatted_text_layer_destroy(data->formatted_content_layer);
+  free(data->plain_text);
+#else
   if (data->content_text_layer) {
     text_layer_destroy(data->content_text_layer);
   } else {
     layer_destroy(data->content_layer);
   }
+#endif
   layer_destroy(layer);
 }
 
 void message_layer_update(MessageLayer* layer) {
   MessageLayerData* data = layer_get_data(layer);
+#if defined(PBL_ROUND)
+  // Reflowing a narrow TextLayer for every streamed fragment leaves stale
+  // pixels at its previous offset. Lay out once when the response is complete.
+  if (conversation_entry_get_type(data->entry) == EntryTypeResponse &&
+      !conversation_entry_get_response(data->entry)->complete) {
+    return;
+  }
+#endif
   const FontsConfig *fonts = fonts_get_config();
   // The text pointer can change out underneath us.
+#if defined(PBL_ROUND)
+  formatted_text_layer_set_text(data->formatted_content_layer, prv_get_content_text(layer));
+  formatted_text_layer_enable_round_layout(data->formatted_content_layer);
+  data->content_height = formatted_text_layer_get_content_size(data->formatted_content_layer).h;
+#else
   if (data->content_text_layer) {
     text_layer_set_text(data->content_text_layer, prv_get_content_text(layer));
   }
   data->content_height = prv_get_content_height(layer);
+#endif
   int width = layer_get_bounds(layer).size.w;
   GRect frame = layer_get_frame(layer);
   frame.size.h = data->content_height + 5;
   if (conversation_entry_get_type(data->entry) == EntryTypePrompt) {
     frame.size.h += fonts->small_font_cap * 1.75;
   }
-  layer_set_frame(data->content_layer, GRect(5, layer_get_frame(data->content_layer).origin.y, width - 10, data->content_height + 5));
+  layer_set_frame(data->content_layer, GRect(CONTENT_PADDING, layer_get_frame(data->content_layer).origin.y, width - CONTENT_PADDING * 2, data->content_height + 5));
   layer_mark_dirty(data->content_layer);
   layer_set_frame(layer, frame);
 }
+
+#if defined(PBL_ROUND)
+static char *prv_round_plain_text(MessageLayerData *data, const char *text) {
+  if (!text) {
+    return "";
+  }
+  size_t needed = strlen(text) + 1;
+  if (data->plain_text_capacity < needed) {
+    free(data->plain_text);
+    data->plain_text = malloc(needed);
+    data->plain_text_capacity = needed;
+  }
+  const char *read = text;
+  char *write = data->plain_text;
+  while (*read) {
+    if (read[0] == '*' && read[1] == '*') {
+      read += 2;
+      continue;
+    }
+    *write++ = *read++;
+  }
+  *write = '\0';
+  return data->plain_text;
+}
+#endif
 
 static char *prv_get_content_text(MessageLayer *layer) {
   MessageLayerData* data = layer_get_data(layer);
@@ -112,7 +190,11 @@ static char *prv_get_content_text(MessageLayer *layer) {
     case EntryTypePrompt:
       return conversation_entry_get_prompt(entry)->prompt;
     case EntryTypeResponse:
+#if defined(PBL_ROUND)
+      return prv_round_plain_text(data, conversation_entry_get_response(entry)->response);
+#else
       return conversation_entry_get_response(entry)->response;
+#endif
     default:
       return "(Mica bug)";
   }
@@ -132,7 +214,7 @@ static int prv_get_content_height(MessageLayer* layer) {
   size_t offset = data->last_newline_offset;
   char* text = prv_get_content_text(layer);
   const GFont font = fonts->text_font;
-  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - 10, 10000);
+  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - CONTENT_PADDING * 2, 10000);
   // This algorithm is somewhat buggy (it can't cope with words getting broken; it assumes only one break per
   // fragment), so for content where speed is less important just actually measure the thing.
   GTextAlignment alignment = GTextAlignmentLeft;
@@ -233,7 +315,7 @@ static bool prv_consume_bullet_marker(const char **p) {
 static int prv_rich_layout(MessageLayer *layer, GContext *ctx) {
   const FontsConfig *fonts = fonts_get_config();
   const char *text = prv_get_content_text(layer);
-  const int width = layer_get_bounds(layer).size.w - 10;
+  const int width = layer_get_bounds(layer).size.w - CONTENT_PADDING * 2;
   const int line_height = prv_max_int(fonts->text_font_cap, fonts->title_font_cap) + 6;
   const int bullet_indent = 14;
   int x = 0;
