@@ -263,14 +263,6 @@
         ]
       },
       {
-        "type": "toggle",
-        "id": "USE_SYSTEM_CJK_FONT",
-        "messageKey": "USE_SYSTEM_CJK_FONT",
-        "label": "使用系统字体（已装中文语言包）",
-        "description": "已安装中文语言包就开启：用系统字体显示中文，字库更全，不再有方块字。切换后重新打开 Mica 生效。",
-        "defaultValue": false
-      },
-      {
         "type": "select",
         "id": "languageCode",
         "messageKey": "LANGUAGE_CODE",

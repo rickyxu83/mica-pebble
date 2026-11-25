@@ -6,7 +6,6 @@
 #include <pebble.h>
 #include "fonts.h"
 #include "i18n.h"
-#include "../settings/settings.h"
 
 typedef struct {
   const char *title_font;
@@ -120,9 +119,9 @@ void fonts_load(void) {
     .small_content_font = fonts_get_system_font(spec->small_content_font),
     .small_content_font_cap = spec->small_content_font_cap,
   };
-  if (i18n_is_chinese() && !settings_get_use_system_cjk_font()) {
-    // Embedded subset font. Users with a CJK language pack should enable
-    // "使用系统字体" in settings to get the pack's full coverage instead.
+  if (i18n_is_chinese()) {
+    // Embedded subset font; community language packs do not patch the app
+    // system fonts on Core Devices, so system-font rendering is not offered.
     if (!spec->title_font) {
       fonts_unload_custom_font(s_config.title_font);
     }
