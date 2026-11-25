@@ -126,13 +126,13 @@ void fonts_load(void) {
     if (!spec->text_font) {
       fonts_unload_custom_font(s_config.text_font);
     }
-    GFont chinese = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_MICA_ZH_20));
+    GFont chinese = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_MICA_ZH_18));
     s_config.title_font = chinese;
-    s_config.title_font_cap = 20;
+    s_config.title_font_cap = 18;
     s_config.text_font = chinese;
-    s_config.text_font_cap = 20;
+    s_config.text_font_cap = 18;
     s_config.small_font = chinese;
-    s_config.small_font_cap = 20;
+    s_config.small_font_cap = 18;
     s_chinese_font_loaded = true;
   }
 }

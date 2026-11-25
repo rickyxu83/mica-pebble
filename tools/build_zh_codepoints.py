@@ -11,7 +11,7 @@ from wordfreq import iter_wordlist
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "tools" / "zh_codepoints.json"
-MAX_FREQUENCY_CHARS = 1800
+MAX_FREQUENCY_CHARS = 3100
 
 codepoints = set(range(0x20, 0x7F))
 codepoints.update(ord(c) for c in "，。！？；：、（）《》“”‘’…—·°％＋－×÷约年月日时分秒点" )
