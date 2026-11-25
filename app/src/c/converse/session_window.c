@@ -164,6 +164,9 @@ static void prv_window_load(Window *window) {
   sw->scroll_indicator_down = blayer_create(GRect(0, window_size.h - STATUS_BAR_LAYER_HEIGHT, window_size.w, STATUS_BAR_LAYER_HEIGHT));
   sw->scroll_layer = bscroll_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT, window_size.w, window_size.h - STATUS_BAR_LAYER_HEIGHT));
   scroll_layer_set_shadow_hidden(sw->scroll_layer, true);
+  // Content size defaults to the (possibly animated) frame; pin it to the
+  // full window size so segments created mid-transition keep correct widths.
+  scroll_layer_set_content_size(sw->scroll_layer, GSize(window_size.w, window_size.h));
   ContentIndicator* indicator = scroll_layer_get_content_indicator(sw->scroll_layer);
   const ContentIndicatorConfig up_config = (ContentIndicatorConfig) {
     .layer = status_bar_layer_get_layer(sw->status_layer),
@@ -287,9 +290,16 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
   }
 }
 
+static int16_t prv_holder_width(SessionWindow *sw) {
+  // Scroll layer content width follows the zoom transition frame while the
+  // push animation runs; conversation content must always use full width.
+  GRect bounds = layer_get_frame(window_get_root_layer(sw->window));
+  return bounds.size.w;
+}
+
 static void prv_set_scroll_height(SessionWindow* sw) {
   GSize old_size = scroll_layer_get_content_size(sw->scroll_layer);
-  GSize new_size = GSize(old_size.w, sw->content_height + PADDING);
+  GSize new_size = GSize(prv_holder_width(sw), sw->content_height + PADDING);
   if (old_size.h >= new_size.h) {
     return;
   }
@@ -328,7 +338,7 @@ static void prv_update_thinking_layer(SessionWindow* sw) {
 
   GSize holder_size = scroll_layer_get_content_size(sw->scroll_layer);
   if (!sw->thinking_layer) {
-    sw->thinking_layer = thinking_layer_create(GRect((holder_size.w - THINKING_LAYER_WIDTH) / 2, sw->content_height + 5, THINKING_LAYER_WIDTH, THINKING_LAYER_HEIGHT));
+    sw->thinking_layer = thinking_layer_create(GRect((prv_holder_width(sw) - THINKING_LAYER_WIDTH) / 2, sw->content_height + 5, THINKING_LAYER_WIDTH, THINKING_LAYER_HEIGHT));
     scroll_layer_add_child(sw->scroll_layer, sw->thinking_layer);
     sw->content_height += THINKING_LAYER_HEIGHT + 5;
     return;
@@ -392,7 +402,7 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
     free(sw->segment_layers);
     sw->segment_layers = new_block;
   }
-  SegmentLayer* layer = segment_layer_create(GRect(0, prv_content_height(sw), holder_size.w, 10), entry, conversation_assistant_just_started(conversation));
+  SegmentLayer* layer = segment_layer_create(GRect(0, prv_content_height(sw), prv_holder_width(sw), 10), entry, conversation_assistant_just_started(conversation));
   sw->segment_layers[sw->segment_count++] = layer;
   // It's possible that the content height changed *while the layer was being created*. In case this happened, move the
   // layer back to where it should be. Because segment layers are expected to adjust their own frame during
@@ -462,7 +472,7 @@ static void prv_conversation_entry_deleted_handler(int index, void* context) {
   GPoint new_offset = GPoint(current_offset.x, current_offset.y - removed_height);
   scroll_layer_set_content_offset(sw->scroll_layer, new_offset, false);
   GSize current_size = scroll_layer_get_content_size(sw->scroll_layer);
-  GSize new_size = GSize(current_size.w, current_size.h - removed_height);
+  GSize new_size = GSize(prv_holder_width(sw), current_size.h - removed_height);
   scroll_layer_set_content_size(sw->scroll_layer, new_size);
   // We need to remove our first segment.
   layer_remove_from_parent(to_delete);

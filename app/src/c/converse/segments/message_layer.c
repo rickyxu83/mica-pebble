@@ -67,14 +67,14 @@ MessageLayer* message_layer_create(GRect rect, ConversationEntry* entry) {
       content_origin_y = fonts->small_font_cap * 1.75;
     }
 #if defined(PBL_ROUND)
-    // The streaming token renderer leaves stale glyphs when its narrow round
-    // layer reflows. System text layout is stable and also handles CJK better.
-    data->rich_content = false;
     data->plain_text = NULL;
     data->plain_text_capacity = 0;
-#else
-    data->rich_content = type == EntryTypeResponse;
 #endif
+    // The token-based rich renderer breaks text on spaces and estimates
+    // heights the same way. CJK text has no spaces, so tokens never wrap:
+    // lines get ellipsized and segment heights come out wrong. System text
+    // layout handles CJK line breaking natively, so always use it.
+    data->rich_content = false;
     text_layer_set_font(data->speaker_layer, fonts->small_font);
     layer_add_child(layer, (Layer *)data->speaker_layer);
     data->last_newline_offset = 0;
@@ -98,6 +98,8 @@ MessageLayer* message_layer_create(GRect rect, ConversationEntry* entry) {
       data->content_text_layer = btext_layer_create(GRect(CONTENT_PADDING, content_origin_y, rect.size.w - CONTENT_PADDING * 2, data->content_height));
       text_layer_set_text(data->content_text_layer, prv_get_content_text(layer));
       text_layer_set_font(data->content_text_layer, fonts->text_font);
+      text_layer_set_overflow_mode(data->content_text_layer, GTextOverflowModeWordWrap);
+      text_layer_set_text_alignment(data->content_text_layer, GTextAlignmentLeft);
       data->content_height = text_layer_get_content_size(data->content_text_layer).h;
       data->content_layer = text_layer_get_layer(data->content_text_layer);
 #endif
