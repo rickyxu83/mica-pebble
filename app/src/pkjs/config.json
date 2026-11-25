@@ -15,7 +15,7 @@
         "type": "select",
         "id": "LLM_PROVIDER",
         "messageKey": "LLM_PROVIDER",
-        "label": "AI provider",
+        "label": "AI 服务商",
         "description": "选择模型服务。Key 仅保存在手机本地，请求直接发往所选 Provider，不经过 Mica 服务器，无订阅费。",
         "defaultValue": "gemini",
         "options": [
@@ -24,7 +24,7 @@
             "value": "gemini"
           },
           {
-            "label": "OpenAI-compatible (OpenAI / DeepSeek / Kimi / Qwen / Ollama / LM Studio)",
+            "label": "OpenAI 兼容（DeepSeek / Kimi / Qwen / Ollama…）",
             "value": "openai"
           },
           {
@@ -78,6 +78,7 @@
       {
         "type": "toggle",
         "id": "SHOW_ADVANCED",
+        "messageKey": "SHOW_ADVANCED",
         "label": "显示高级设置",
         "description": "默认折叠端点、模型、Runtime 和反馈等高级项，普通使用无需展开。",
         "defaultValue": false
@@ -90,7 +91,7 @@
         "type": "select",
         "id": "ASSISTANT_RUNTIME",
         "messageKey": "ASSISTANT_RUNTIME",
-        "label": "Runtime",
+        "label": "运行时（高级）",
         "description": "默认 Companionless：只用手表 App 和手机即可运行，无需安装额外 companion。",
         "defaultValue": "companionless",
         "options": [
@@ -126,7 +127,7 @@
         "type": "input",
         "id": "GEMINI_MODEL",
         "messageKey": "GEMINI_MODEL",
-        "label": "Gemini model",
+        "label": "Gemini 模型（高级）",
         "description": "The Gemini API model used by the local assistant runtime.",
         "defaultValue": "gemini-3.1-flash-lite"
       },
@@ -156,7 +157,7 @@
         "type": "input",
         "id": "OPENAI_MODEL",
         "messageKey": "OPENAI_MODEL",
-        "label": "OpenAI-compatible model",
+        "label": "模型（高级 / 自定义）",
         "description": "Examples: gpt-4o-mini · deepseek-chat · moonshot-v1-8k · qwen-plus · llama3.1",
         "defaultValue": "deepseek-chat"
       },
@@ -178,7 +179,7 @@
         "type": "input",
         "id": "CLAUDE_MODEL",
         "messageKey": "CLAUDE_MODEL",
-        "label": "Claude model",
+        "label": "Claude 模型（高级）",
         "description": "Examples: claude-sonnet-4-5 · claude-haiku-4-5",
         "defaultValue": "claude-sonnet-4-5"
       },
@@ -186,7 +187,7 @@
         "type": "input",
         "id": "GEMINI_MONTHLY_BUDGET_USD",
         "messageKey": "GEMINI_MONTHLY_BUDGET_USD",
-        "label": "Gemini monthly budget",
+        "label": "Gemini 月预算（高级）",
         "description": "Used only for Mica's local estimate on the Quota screen. Google AI Studio billing is authoritative.",
         "defaultValue": "10"
       },
@@ -194,7 +195,7 @@
         "type": "input",
         "id": "GITHUB_ISSUES_URL",
         "messageKey": "GITHUB_ISSUES_URL",
-        "label": "Feedback GitHub issues URL",
+        "label": "反馈 GitHub Issue 地址（高级）",
         "description": "Optional. Leave blank if you have no issue tracker.",
         "defaultValue": ""
       },
@@ -202,13 +203,14 @@
         "type": "input",
         "id": "FEEDBACK_POST_URL",
         "messageKey": "FEEDBACK_POST_URL",
-        "label": "Feedback POST endpoint",
+        "label": "反馈接收端点（高级）",
         "description": "Optional. Bobby-style feedback posts JSON here and returns Sent/Error on the watch. Leave blank to open a prefilled GitHub issue instead.",
         "defaultValue": ""
       },
       {
         "type": "input",
         "id": "NOMINATIM_BASE_URL",
+        "messageKey": "NOMINATIM_BASE_URL",
         "label": "Geocoding service base URL (advanced)",
         "description": "Leave blank for the public OpenStreetMap Nominatim service. Set a compatible alternative to change providers without an app update. Public-service rate limits and attribution requirements apply.",
         "defaultValue": ""
@@ -216,6 +218,7 @@
       {
         "type": "input",
         "id": "STATIC_MAP_BASE_URL",
+        "messageKey": "STATIC_MAP_BASE_URL",
         "label": "Static map service URL (advanced)",
         "description": "Leave blank for staticmap.openstreetmap.de. Set a compatible staticmap.php endpoint if your map provider changes.",
         "defaultValue": ""
@@ -224,7 +227,7 @@
         "type": "input",
         "id": "USER_PROFILE_CONTEXT",
         "messageKey": "USER_PROFILE_CONTEXT",
-        "label": "Assistant profile context",
+        "label": "助手记忆（高级）",
         "description": "Optional companionless memory/profile notes Mica should use, such as preferred name, home timezone, family names, pets, or preferences. Stored locally by the Pebble phone app.",
         "defaultValue": ""
       }
