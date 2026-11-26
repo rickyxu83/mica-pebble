@@ -197,22 +197,6 @@
       },
       {
         "type": "input",
-        "id": "GITHUB_ISSUES_URL",
-        "messageKey": "GITHUB_ISSUES_URL",
-        "label": "反馈 GitHub Issue 地址（高级）",
-        "description": "Feedback opens a prefilled issue at this address. Defaults to the Mica repository.",
-        "defaultValue": "https://github.com/rickyxu83/mica-pebble/issues/new"
-      },
-      {
-        "type": "input",
-        "id": "FEEDBACK_POST_URL",
-        "messageKey": "FEEDBACK_POST_URL",
-        "label": "反馈接收端点（高级）",
-        "description": "Optional. Feedback posts JSON here and returns Sent/Error on the watch. Leave blank to open a prefilled GitHub issue instead.",
-        "defaultValue": ""
-      },
-      {
-        "type": "input",
         "id": "NOMINATIM_BASE_URL",
         "messageKey": "NOMINATIM_BASE_URL",
         "label": "Geocoding service base URL (advanced)",

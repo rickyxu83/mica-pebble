@@ -95,19 +95,6 @@ exports.getGeminiMonthlyBudgetUsd = function() {
     return exports.getSetting('GEMINI_MONTHLY_BUDGET_USD', '10');
 }
 
-exports.getGithubIssuesUrl = function() {
-    var value = String(exports.getSetting('GITHUB_ISSUES_URL', '') || '').replace(/^\s+|\s+$/g, '');
-    // Default: Mica's own issue tracker, so watch feedback opens a
-    // prefilled issue the author actually sees (previously a blank
-    // setting silently dropped the feedback). Users can override
-    // this URL, or set a feedback POST endpoint, in advanced settings.
-    return value || 'https://github.com/rickyxu83/mica-pebble/issues/new';
-}
-
-exports.getFeedbackPostUrl = function() {
-    return String(exports.getSetting('FEEDBACK_POST_URL', '') || '').replace(/^\s+|\s+$/g, '');
-}
-
 exports.getNominatimBaseUrl = function() {
     var value = String(exports.getSetting('NOMINATIM_BASE_URL', '') || '').replace(/\s+$/g, '').replace(/\/+$/g, '');
     return value || 'https://nominatim.openstreetmap.org';

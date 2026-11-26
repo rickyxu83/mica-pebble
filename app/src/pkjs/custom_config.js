@@ -88,8 +88,6 @@ module.exports = function(minified) {
             [
                 'ASSISTANT_RUNTIME',
                 'GEMINI_MONTHLY_BUDGET_USD',
-                'GITHUB_ISSUES_URL',
-                'FEEDBACK_POST_URL',
                 'NOMINATIM_BASE_URL',
                 'STATIC_MAP_BASE_URL',
                 'USER_PROFILE_CONTEXT'

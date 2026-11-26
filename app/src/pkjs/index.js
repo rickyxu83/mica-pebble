@@ -23,7 +23,6 @@ var clayConfig = require('./config.json');
 var customConfigFunction = require('./custom_config');
 var config = require('./config');
 var reminders = require('./reminders');
-var feedback = require('./lib/feedback');
 var quiet = require('./lib/quiet');
 var package_json = require('package.json');
 var runtimeRouter = require('./agent/runtime_router');
@@ -160,14 +159,6 @@ function handleAppMessageInner(e) {
         Pebble.sendAppMessage({
             LOCATION_ENABLED: data.LOCATION_ENABLED,
         });
-    }
-    if ('FEEDBACK_TEXT' in data) {
-        console.log("Handling feedback...");
-        feedback.handleFeedbackRequest(data);
-    }
-    if ('REPORT_THREAD_UUID' in data) {
-        console.log("Handling report...");
-        feedback.handleReportRequest(data);
     }
 }
 
