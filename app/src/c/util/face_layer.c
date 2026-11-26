@@ -5,15 +5,15 @@
 #include "memory/sdk.h"
 
 // Face geometry, as fractions of the layer bounds: the eyes sit at
-// 0.36/0.64 of the width and 0.42 of the height, the mouth is centred
-// at 0.68 of the height, and the resting capsule eye is 0.11 of the
-// width by 0.34 of the height. Everything derives from the bounds, so
-// one implementation reads from the 64 px mascot down to the 48 px
-// thinking face.
-#define FACE_EYE_LEFT_X_NUM 36
-#define FACE_EYE_RIGHT_X_NUM 64
-#define FACE_EYE_Y_NUM 42
-#define FACE_MOUTH_Y_NUM 68
+// 0.29/0.71 of the width and 0.44 of the height, the mouth is centred
+// at 0.63 of the height, and the resting capsule eye is 0.12 of the
+// width by 0.22 of the height (style 2: shorter, fatter eyes with the
+// tiny omega mouth below). Everything derives from the bounds, so one
+// implementation reads from the 64 px mascot down to the thinking face.
+#define FACE_EYE_LEFT_X_NUM 29
+#define FACE_EYE_RIGHT_X_NUM 71
+#define FACE_EYE_Y_NUM 44
+#define FACE_MOUTH_Y_NUM 63
 #define FACE_PERCENT 100
 
 typedef struct {
@@ -82,8 +82,8 @@ static void prv_draw_eye(GContext *ctx, const GRect *bounds, FaceEyeKind kind,
   const int16_t h = bounds->size.h;
   switch (kind) {
     case FaceEyeDot: {
-      int16_t eye_w = w * 11 / FACE_PERCENT;
-      int16_t eye_h = h * 34 / FACE_PERCENT;
+      int16_t eye_w = w * 12 / FACE_PERCENT;
+      int16_t eye_h = h * 22 / FACE_PERCENT;
       prv_fill_capsule(ctx, center_x, center_y,
           eye_w < 3 ? 3 : eye_w, eye_h < 3 ? 3 : eye_h);
       break;
@@ -148,6 +148,26 @@ static void prv_draw_mouth(GContext *ctx, const GRect *bounds,
       int16_t mouth_h = h * 5 / FACE_PERCENT;
       prv_fill_capsule(ctx, center_x, mouth_y,
           mouth_w < 4 ? 4 : mouth_w, mouth_h < 2 ? 2 : mouth_h);
+      break;
+    }
+    case FaceMouthOmega: {
+      // Two bottom-half arcs (∪∪) side by side, their circles touching
+      // at the centre so the pair reads as a tiny "ω". A bottom arc
+      // sweeps 90 -> 270 in this codebase's angle convention (the smile
+      // arc's 120 -> 240 passes through 180, the bottom point).
+      int16_t radius = w * 55 / 1000;
+      if (radius < 3) {
+        radius = 3;
+      }
+      int16_t stroke = h * 45 / 1000;
+      graphics_context_set_stroke_width(ctx, stroke < 2 ? 2 : stroke);
+      for (int side = -1; side <= 1; side += 2) {
+        int16_t cx = center_x + side * radius;
+        graphics_draw_arc(ctx,
+            GRect(cx - radius, mouth_y - radius, radius * 2, radius * 2),
+            GOvalScaleModeFitCircle,
+            DEG_TO_TRIGANGLE(90), DEG_TO_TRIGANGLE(270));
+      }
       break;
     }
     case FaceMouthWave: {

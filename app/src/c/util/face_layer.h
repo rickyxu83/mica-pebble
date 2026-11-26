@@ -24,6 +24,7 @@ typedef enum {
   FaceMouthBigSmile,   // Wider, deeper arc.
   FaceMouthFlat,       // Short horizontal line.
   FaceMouthWave,       // Animated sine polyline (speaking/thinking).
+  FaceMouthOmega,      // Two small ∪ arcs side by side (a tiny "ω").
 } FaceMouthKind;
 
 typedef Layer FaceLayer;

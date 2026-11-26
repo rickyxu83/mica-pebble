@@ -223,10 +223,12 @@ static void prv_window_appear(Window* window) {
 
   rw->mascot_base_y = time_y + time_height + 24;
   // The mascot is the NOMI-style face (util/face_layer.c), drawn live so
-  // it can blink and make expressions; it defaults to the resting
-  // DOT + SMILE expression. The idle expression state machine below
+  // it can blink and make expressions; its resting expression is
+  // DOT + OMEGA (style 2). The idle expression state machine below
   // drives the rest.
   rw->mascot_layer = face_layer_create(GRect((content_width - 64) / 2, rw->mascot_base_y, 64, 64));
+  face_layer_set_expression(rw->mascot_layer, FaceEyeDot,
+      FaceMouthOmega, 0, 0, 0);
   layer_add_child(window_get_root_layer(rw->window), face_layer_get_layer(rw->mascot_layer));
   // On the entrance push the mascot leads the page slide (see
   // util/transition.c); registrations outside a push are ignored.
@@ -284,7 +286,7 @@ static void prv_window_appear(Window* window) {
 
 // Idle expressions for the mascot face: a ~3 s cycle that is a 150 ms
 // blink, except every fourth cycle, which is a 700 ms happy flash
-// (^^ eyes, big smile) instead. One timer alternates between the tick
+// (^^ eyes) instead. One timer alternates between the tick
 // (idle -> expression) and restore (expression -> idle) callbacks, so
 // exactly one expression timer is ever pending; prv_window_disappear
 // cancels whichever is outstanding.
@@ -293,11 +295,11 @@ static void prv_expression_tick(void *context) {
   rw->expression_cycles++;
   if (rw->expression_cycles % EXPRESSION_HAPPY_EVERY == 0) {
     face_layer_set_expression(rw->mascot_layer, FaceEyeHappy,
-        FaceMouthBigSmile, 0, 0, 0);
+        FaceMouthOmega, 0, 0, 0);
     rw->expression_shown_ms = EXPRESSION_HAPPY_MS;
   } else {
     face_layer_set_expression(rw->mascot_layer, FaceEyeBlink,
-        FaceMouthSmile, 0, 0, 0);
+        FaceMouthOmega, 0, 0, 0);
     rw->expression_shown_ms = EXPRESSION_BLINK_MS;
   }
   rw->expression_timer = app_timer_register(rw->expression_shown_ms,
@@ -307,7 +309,7 @@ static void prv_expression_tick(void *context) {
 static void prv_expression_restore(void *context) {
   RootWindow *rw = context;
   face_layer_set_expression(rw->mascot_layer, FaceEyeDot,
-      FaceMouthSmile, 0, 0, 0);
+      FaceMouthOmega, 0, 0, 0);
   rw->expression_timer = app_timer_register(
       EXPRESSION_PERIOD_MS - rw->expression_shown_ms,
       prv_expression_tick, rw);
