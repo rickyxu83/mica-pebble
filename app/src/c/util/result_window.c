@@ -67,7 +67,7 @@ void result_window_push(const char* title, const char* text, GDrawCommandImage *
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 void result_window_push_bitmap(const char* title, const char* text, GBitmap *image, GColor background_color) {
@@ -91,7 +91,7 @@ void result_window_push_bitmap(const char* title, const char* text, GBitmap *ima
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_window_load(Window* window) {
@@ -133,6 +133,13 @@ static void prv_window_load(Window* window) {
     data->image_layer = vector_layer_create(GRect(bounds.size.w / 2 - image_size.w / 2, bounds.size.h - image_size.h - 5, image_size.w, image_size.h));
     vector_layer_set_vector(data->image_layer, data->image);
     layer_add_child(root_layer, vector_layer_get_layer(data->image_layer));
+  }
+  // The result image (the Mica mark on branded results) leads the
+  // entrance slide; see util/transition.c.
+  if (data->bitmap_image_layer) {
+    mica_transition_register_lead_layer(bitmap_layer_get_layer(data->bitmap_image_layer));
+  } else if (data->image_layer) {
+    mica_transition_register_lead_layer(vector_layer_get_layer(data->image_layer));
   }
 }
 

@@ -65,7 +65,7 @@ void alarm_menu_window_push(bool for_timers) {
     .appear = prv_window_appear,
     .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_window_load(Window* window) {

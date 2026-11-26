@@ -47,7 +47,7 @@ void prv_release_notes_push() {
     .appear = prv_appear,
     .unload = prv_unload,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_appear(Window *window) {

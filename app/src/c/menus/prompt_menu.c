@@ -85,5 +85,5 @@ void prompt_menu_push(char **items, int count) {
     .appear = prv_appear,
     .unload = prv_unload,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }

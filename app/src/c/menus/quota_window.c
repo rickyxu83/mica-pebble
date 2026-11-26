@@ -55,7 +55,7 @@ void push_quota_window() {
     .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_window_load(Window* window) {

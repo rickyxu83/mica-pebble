@@ -66,7 +66,7 @@ void root_menu_window_push() {
     .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static uint16_t prv_num_rows(MenuLayer *menu_layer, uint16_t section, void *context) {

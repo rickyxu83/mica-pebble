@@ -74,7 +74,7 @@ void consent_window_push() {
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 bool must_present_consent() {

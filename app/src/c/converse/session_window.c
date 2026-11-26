@@ -38,10 +38,11 @@
 #include "report_window.h"
 
 #define PADDING 5
-// New conversation segments slide up into place from this many pixels
-// below their resting position.
-#define SEGMENT_ARRIVAL_OFFSET_PX 10
-#define SEGMENT_ARRIVAL_MS 250
+// New conversation segments rise into place from this many pixels below
+// their resting position, on the settle curve (see util/transition.c):
+// a fast rise with a slight overshoot past the resting position.
+#define SEGMENT_ARRIVAL_OFFSET_PX 14
+#define SEGMENT_ARRIVAL_MS 280
 // How long the thinking layer takes to glide after a streaming segment
 // whose height changed.
 #define THINKING_GLUE_MS 120
@@ -138,7 +139,7 @@ void session_window_push(int timeout, char *starting_prompt) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_destroy(SessionWindow *sw) {
@@ -341,7 +342,7 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
     sw->dictation_resume_attempts = 0;
     sw->dictating_clarification = false;
     if (conversation_peek(conversation_manager_get_conversation(sw->manager)) == NULL) {
-      window_stack_pop(true);
+      mica_animate_window_pop(sw->window);
     }
     break;
   default:
@@ -373,9 +374,14 @@ typedef struct {
 
 static void prv_slide_update(Animation *animation, const AnimationProgress progress) {
   YSlideContext *ctx = animation_get_context(animation);
+  // Arrival slides run on the shared settle curve (their Animation curve
+  // is Linear, so this mapping is the only easing); other slides keep
+  // the curve the animation system applied to progress.
+  const AnimationProgress eased = ctx->is_arrival ?
+      mica_curve_settle(progress) : progress;
   GRect frame = layer_get_frame(ctx->layer);
   frame.origin.y = ctx->from_y + (int16_t)(((int32_t)ctx->to_y - (int32_t)ctx->from_y) *
-      (int32_t)progress / (int32_t)ANIMATION_NORMALIZED_MAX);
+      (int32_t)eased / (int32_t)ANIMATION_NORMALIZED_MAX);
   layer_set_frame(ctx->layer, frame);
 }
 
@@ -426,7 +432,9 @@ static void prv_slide_layer_y(SessionWindow *sw, Layer *layer, int16_t to_y,
   ctx->is_arrival = is_arrival;
   Animation *animation = animation_create();
   animation_set_duration(animation, duration_ms);
-  animation_set_curve(animation, curve);
+  // Arrival slides ease in prv_slide_update via the settle curve, so
+  // their system curve must be Linear to avoid easing twice.
+  animation_set_curve(animation, is_arrival ? AnimationCurveLinear : curve);
   animation_set_implementation(animation, &s_slide_implementation);
   animation_set_handlers(animation, (AnimationHandlers) {
     .stopped = prv_slide_stopped,
@@ -704,9 +712,9 @@ static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
   if (sw && sw->dictation) {
     dictation_session_stop(sw->dictation);
   }
-  // Native animated pop: the mirror image of the animated push, so the
+  // Elastic pop: the mirror image of the elastic push, so the
   // conversation leaves the same way it arrived.
-  window_stack_pop(true);
+  mica_animate_window_pop(sw->window);
 }
 
 static void prv_click_config_provider(void *context) {
@@ -953,7 +961,8 @@ static void prv_cancel_timeout(SessionWindow* sw) {
 
 static void prv_timed_out(void *ctx) {
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Timed out");
-  window_stack_pop(true);
+  SessionWindow *sw = ctx;
+  mica_animate_window_pop(sw->window);
 }
 
 static void prv_begin_dictation(SessionWindow *sw) {

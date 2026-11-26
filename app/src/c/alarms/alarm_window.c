@@ -82,7 +82,7 @@ void alarm_window_push(time_t alarm_time, bool is_timer, char *name) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, true);
+  mica_animate_window_push(window);
 }
 
 static void prv_window_load(Window *window) {
@@ -240,7 +240,7 @@ static void prv_handle_snooze(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void prv_handle_dismiss(ClickRecognizerRef recognizer, void *context) {
-  window_stack_pop(true);
+  mica_animate_window_pop((Window *)context);
 }
 
 static uint32_t prv_resource_id_for_setting(VibePatternSetting setting) {

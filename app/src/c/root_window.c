@@ -24,6 +24,7 @@
 #include "menus/prompt_menu.h"
 #include "util/logging.h"
 #include "util/style.h"
+#include "util/transition.h"
 #include "util/time.h"
 #include "util/i18n.h"
 #include "util/fonts.h"
@@ -49,7 +50,7 @@ struct RootWindow {
   GBitmap* mascot;
   AppTimer* mascot_timer;
   int16_t mascot_base_y;
-  bool mascot_lifted;
+  uint32_t mascot_phase_ms;
   EventHandle event_handle;
   EventHandle app_message_handle;
   char time_string[6];
@@ -68,7 +69,7 @@ static void prv_time_changed(struct tm *tick_time, TimeUnits time_changed, void 
 static int prv_load_suggestions(char*** suggestions);
 static void prv_app_message_handler(DictionaryIterator *iter, void *context);
 static void prv_send_watch_ready(void);
-static void prv_animate_mascot(void *context);
+static void prv_mascot_breath_tick(void *context);
 
 RootWindow* root_window_create() {
   RootWindow* rw = bmalloc(sizeof(RootWindow));
@@ -84,7 +85,7 @@ RootWindow* root_window_create() {
 }
 
 void root_window_push(RootWindow* window) {
-  window_stack_push(window->window, true);
+  mica_animate_window_push(window->window);
 }
 
 void root_window_destroy(RootWindow* window) {
@@ -146,6 +147,9 @@ static void prv_window_appear(Window* window) {
   bitmap_layer_set_background_color(rw->mascot_layer, GColorClear);
   bitmap_layer_set_compositing_mode(rw->mascot_layer, GCompOpSet);
   layer_add_child(window_get_root_layer(rw->window), bitmap_layer_get_layer(rw->mascot_layer));
+  // On the entrance push the mascot leads the page slide (see
+  // util/transition.c); registrations outside a push are ignored.
+  mica_transition_register_lead_layer(bitmap_layer_get_layer(rw->mascot_layer));
 
   int16_t greeting_inset = PBL_IF_ROUND_ELSE(24, 8);
   rw->greeting_layer = btext_layer_create(GRect(greeting_inset, rw->mascot_base_y + 72,
@@ -181,17 +185,34 @@ static void prv_window_appear(Window* window) {
     rw->app_message_handle = events_app_message_register_inbox_received(prv_app_message_handler, rw);
   }
   prv_send_watch_ready();
-  rw->mascot_timer = app_timer_register(650, prv_animate_mascot, rw);
+  // Idle breathing starts only once the entrance choreography has
+  // settled (280 ms slide + 50 ms logo lead), so the two never fight
+  // over the mascot's frame. prv_window_disappear cancels the timer, so
+  // any navigation stops the breathing instantly.
+  rw->mascot_phase_ms = 0;
+  rw->mascot_timer = app_timer_register(350, prv_mascot_breath_tick, rw);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window appeared. Heap usage increased %d bytes", heap_size - heap_bytes_free());
 }
 
-static void prv_animate_mascot(void *context) {
+// The mascot gently bobs ±2 px on a ~2400 ms sine loop while the home
+// window is visible.
+#define MASCOT_BREATH_PERIOD_MS 2400
+#define MASCOT_BREATH_STEP_MS 100
+#define MASCOT_BREATH_AMPLITUDE_PX 2
+
+static void prv_mascot_breath_tick(void *context) {
   RootWindow *rw = context;
-  rw->mascot_lifted = !rw->mascot_lifted;
+  rw->mascot_phase_ms = (rw->mascot_phase_ms + MASCOT_BREATH_STEP_MS) %
+      MASCOT_BREATH_PERIOD_MS;
+  const uint32_t angle = rw->mascot_phase_ms * TRIG_MAX_ANGLE /
+      MASCOT_BREATH_PERIOD_MS;
+  const int16_t offset = (int16_t)(MASCOT_BREATH_AMPLITUDE_PX *
+      sin_lookup(angle) / TRIG_MAX_RATIO);
   GRect frame = layer_get_frame(bitmap_layer_get_layer(rw->mascot_layer));
-  frame.origin.y = rw->mascot_base_y + (rw->mascot_lifted ? -2 : 0);
+  frame.origin.y = rw->mascot_base_y + offset;
   layer_set_frame(bitmap_layer_get_layer(rw->mascot_layer), frame);
-  rw->mascot_timer = app_timer_register(650, prv_animate_mascot, rw);
+  rw->mascot_timer = app_timer_register(MASCOT_BREATH_STEP_MS,
+      prv_mascot_breath_tick, rw);
 }
 
 static void prv_window_disappear(Window* window) {
