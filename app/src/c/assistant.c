@@ -124,6 +124,10 @@ static void prv_init(void) {
   version_init();
   consent_migrate();
   settings_init();
+  // Opt into the firmware gesture bridge once: on touch hardware it maps
+  // swipes/taps on MenuLayer/ScrollLayer surfaces to button presses when
+  // the user has enabled touch navigation system-wide.
+  app_touch_navigation_enable(true);
   conversation_manager_init();
 #if ENABLE_FEATURE_IMAGE_MANAGER
   image_manager_init();

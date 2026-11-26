@@ -53,6 +53,12 @@ struct RootWindow {
   uint32_t mascot_phase_ms;
   EventHandle event_handle;
   EventHandle app_message_handle;
+  bool touch_subscribed;
+  bool touch_tracking;
+  bool touch_moved_too_far;
+  uint64_t touch_down_time_ms;
+  int16_t touch_down_x;
+  int16_t touch_down_y;
   char time_string[6];
   char version_string[9];
   bool greeting_overridden;
@@ -70,6 +76,7 @@ static int prv_load_suggestions(char*** suggestions);
 static void prv_app_message_handler(DictionaryIterator *iter, void *context);
 static void prv_send_watch_ready(void);
 static void prv_mascot_breath_tick(void *context);
+static void prv_touch_event_handler(const TouchEvent *event, void *context);
 
 RootWindow* root_window_create() {
   RootWindow* rw = bmalloc(sizeof(RootWindow));
@@ -95,6 +102,70 @@ void root_window_destroy(RootWindow* window) {
 
 Window* root_window_get_window(RootWindow* window) {
   return window->window;
+}
+
+#define ROOT_TOUCH_TAP_MAX_MS 300
+#define ROOT_TOUCH_TAP_MAX_DISTANCE_PX 10
+
+static uint64_t prv_now_ms(void) {
+  time_t seconds;
+  uint16_t milliseconds;
+  time_ms(&seconds, &milliseconds);
+  return ((uint64_t)(uint32_t)seconds * 1000) + milliseconds;
+}
+
+static bool prv_touch_is_tap_distance(int16_t dx, int16_t dy) {
+  const int32_t distance_sq = (int32_t)dx * dx + (int32_t)dy * dy;
+  return distance_sq < ROOT_TOUCH_TAP_MAX_DISTANCE_PX *
+      ROOT_TOUCH_TAP_MAX_DISTANCE_PX;
+}
+
+static void prv_touch_event_handler(const TouchEvent *event, void *context) {
+  RootWindow *rw = context;
+  if (!event || !rw || !rw->touch_subscribed) {
+    return;
+  }
+  if (event->non_navigational) {
+    // Contacts that began as an unarmed touch on the idle watchface are
+    // not app input, even if later events in the contact look like a tap.
+    rw->touch_tracking = false;
+    return;
+  }
+  if (window_stack_get_top_window() != rw->window) {
+    rw->touch_tracking = false;
+    return;
+  }
+
+  switch (event->type) {
+    case TouchEvent_Touchdown:
+      rw->touch_tracking = true;
+      rw->touch_moved_too_far = false;
+      rw->touch_down_time_ms = prv_now_ms();
+      rw->touch_down_x = event->x;
+      rw->touch_down_y = event->y;
+      break;
+    case TouchEvent_PositionUpdate:
+      if (rw->touch_tracking &&
+          !prv_touch_is_tap_distance(event->x - rw->touch_down_x,
+              event->y - rw->touch_down_y)) {
+        rw->touch_moved_too_far = true;
+      }
+      break;
+    case TouchEvent_Liftoff: {
+      const bool is_tap = rw->touch_tracking && !rw->touch_moved_too_far &&
+          prv_now_ms() - rw->touch_down_time_ms <= ROOT_TOUCH_TAP_MAX_MS &&
+          prv_touch_is_tap_distance(event->x - rw->touch_down_x,
+              event->y - rw->touch_down_y);
+      rw->touch_tracking = false;
+      if (is_tap) {
+        // The home screen has no MenuLayer/ScrollLayer for the firmware
+        // gesture bridge to map this tap onto, so invoke Select's exact
+        // existing handler.
+        prv_prompt_clicked(NULL, rw);
+      }
+      break;
+    }
+  }
 }
 
 static void prv_window_load(Window *window) {
@@ -185,6 +256,10 @@ static void prv_window_appear(Window* window) {
     rw->app_message_handle = events_app_message_register_inbox_received(prv_app_message_handler, rw);
   }
   prv_send_watch_ready();
+  if (!rw->touch_subscribed) {
+    touch_service_subscribe(prv_touch_event_handler, rw);
+    rw->touch_subscribed = true;
+  }
   // Idle breathing starts only once the entrance choreography has
   // settled (280 ms slide + 50 ms logo lead), so the two never fight
   // over the mascot's frame. prv_window_disappear cancels the timer, so
@@ -218,6 +293,11 @@ static void prv_mascot_breath_tick(void *context) {
 static void prv_window_disappear(Window* window) {
   size_t heap_size = heap_bytes_free();
   RootWindow* rw = window_get_user_data(window);
+  if (rw->touch_subscribed) {
+    touch_service_unsubscribe();
+    rw->touch_subscribed = false;
+  }
+  rw->touch_tracking = false;
   if (rw->mascot_timer) {
     app_timer_cancel(rw->mascot_timer);
     rw->mascot_timer = NULL;
