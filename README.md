@@ -6,7 +6,7 @@ Mica is a bring-your-own-API AI assistant for modern Pebble watches — no Mica 
 
 Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合一的 Pebble AI 助手。面向 **Pebble Time 2（emery）** 与 **Pebble Round 2（gabbro）**。
 
-> **开发预览（v0.2）**：emery 与 gabbro 的构建和模拟器流程已验证，中文 UI 已内置；真机与语音链路正在验收，当前不是正式商店发布版。
+> **当前版本 v0.3.2**（[GitHub 预发布](https://github.com/rickyxu83/mica-pebble/releases/tag/v0.3.2)）：已在 Pebble Time 2 真机上日常使用，中文 UI 内置；尚未上架 Pebble 应用商店。
 
 <p>
   <img src="docs/screenshots/mica-emery-main.png" alt="Mica emery 主界面" width="200">
@@ -18,6 +18,11 @@ Bobby 体验 + Billy 的免订阅 + pebble-ai-companion 的多 provider，三合
 - **多 provider**：Google Gemini（含联网搜索 grounding）、OpenAI 兼容、Anthropic Claude，设置页一键切换，key/model/endpoint 分别保存
 - **语音输入**：走 Pebble 官方 Dictation API；新 Core 手机 App 在手机本地转写（系统语音识别或本地 Whisper），**语音也免费**
 - **Bobby 系完整体验**：闹钟 / 定时器 / Timeline 提醒 / 天气卡片 / 地图卡片 / 澄清选项 / 图片传输 / 个人记忆 / Quick Launch
+- **表情脸吉祥物**：声波柱图标回到主页会变形为胶囊眼 + ω 嘴的表情脸，待机时轮换 9 种表情；思考状态也是它
+- **动画与触摸**：窗口弹性进出场、内容滑入、主页呼吸动效；Time 2 / Round 2 支持手势导航与手指跟随滚动
+- **主题配色**：薰衣草（默认）/ 天蓝 / 薄荷 / 蜜瓜四种主题色，设置页切换
+- **听写自动续录**：语音输入被手机通知打断后，回到 Mica 自动重新开始听写（被打断的那一句需重说，平台限制）
+- **诊断与反馈**：设置页内置诊断日志；语音反馈默认打开本仓库 Issues，不会静默丢失
 
 ## 灵感来源
 
@@ -37,7 +42,8 @@ Mica 在此基础上重点发展 **多 Provider、自定义 OpenAI-compatible En
 |---|---|
 | Pebble Time 2（emery）构建与 PBW 打包 | ✅ 已通过 |
 | emery 模拟器安装、首次启动、主界面与菜单 | ✅ 已通过 |
-| emery 真机、语音与 DeepSeek 实测 | 🚧 真机验证中 |
+| emery 真机、语音与 DeepSeek 实测 | ✅ 已通过（真机日常使用） |
+| 表情脸、界面动画与触摸手势 | ✅ 已通过 |
 | Pebble Round 2（gabbro）构建、打包与圆屏模拟器 | ✅ 已通过 |
 | 中文 UI、内置中文字体与中英文切换 | ✅ 已通过 |
 | Provider 模板与高级项折叠设置页 | ✅ 已优化 |
@@ -45,7 +51,7 @@ Mica 在此基础上重点发展 **多 Provider、自定义 OpenAI-compatible En
 
 ## 下载
 
-预编译的 emery 开发预览版见 **[GitHub Releases](https://github.com/rickyxu83/mica-pebble/releases/tag/v0.1.0)**。下载 PBW 后可通过 Pebble 手机 App 或 `pebble install` 安装；真机兼容性仍待设备验收。
+最新预编译版见 **[GitHub Releases](https://github.com/rickyxu83/mica-pebble/releases/tag/v0.3.2)**（v0.3.2，含 emery / gabbro）。下载 PBW 后可通过 Pebble 手机 App 或 `pebble install` 侧载安装。
 
 ## 快速开始
 
