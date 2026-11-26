@@ -1,7 +1,7 @@
 {
   "name": "mica",
   "author": "Thomas Bolger and Mica contributors",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "keywords": [
     "pebble-app"
   ],
@@ -52,8 +52,7 @@
       }
     ],
     "targetPlatforms": [
-      "emery",
-      "gabbro"
+      "emery"
     ],
     "watchapp": {
       "watchface": false
