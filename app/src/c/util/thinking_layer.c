@@ -109,14 +109,18 @@ void thinking_layer_destroy(ThinkingLayer *layer) {
   if (data->dismissing) {
     return;
   }
-  if (layer_get_parent(layer) != NULL) {
-    // Still on screen (window teardown): destroy immediately, as before.
-    prv_destroy_now(layer);
+  prv_destroy_now(layer);
+}
+
+void thinking_layer_dismiss(ThinkingLayer *layer) {
+  ThinkingLayerData* data = layer_get_data(layer);
+  if (data->dismissing) {
     return;
   }
-  // Already detached (the session flow removes the layer, then destroys
-  // it): shrink out over REVEAL_OUT_MS, then destroy. The layer is
-  // self-contained, so finishing the teardown a beat later is safe.
+  // The caller has already detached the layer (the session flow removes
+  // it, then dismisses it): shrink out over REVEAL_OUT_MS, then destroy.
+  // The layer is self-contained, so finishing the teardown a beat later
+  // is safe.
   if (data->reveal_animation) {
     Animation *old = data->reveal_animation;
     data->reveal_animation = NULL;

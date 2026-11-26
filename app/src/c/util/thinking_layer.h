@@ -28,5 +28,9 @@ typedef Layer ThinkingLayer;
 
 ThinkingLayer* thinking_layer_create(GRect rect);
 void thinking_layer_destroy(ThinkingLayer *layer);
+// Animated dismissal for a layer the caller has already detached from
+// its parent: shrinks out, then destroys itself. Use thinking_layer_destroy
+// for layers that are still parented (e.g. window teardown).
+void thinking_layer_dismiss(ThinkingLayer *layer);
 
 #endif

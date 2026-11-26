@@ -524,7 +524,7 @@ static void prv_update_thinking_layer(SessionWindow* sw) {
       prv_cancel_thinking_move(sw);
       sw->content_height -= THINKING_LAYER_HEIGHT + 5;
       layer_remove_from_parent(sw->thinking_layer);
-      thinking_layer_destroy(sw->thinking_layer);
+      thinking_layer_dismiss(sw->thinking_layer);
       sw->thinking_layer = NULL;
     }
     return;
