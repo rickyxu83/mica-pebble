@@ -200,8 +200,8 @@
         "id": "GITHUB_ISSUES_URL",
         "messageKey": "GITHUB_ISSUES_URL",
         "label": "反馈 GitHub Issue 地址（高级）",
-        "description": "Optional. Leave blank if you have no issue tracker.",
-        "defaultValue": ""
+        "description": "Feedback opens a prefilled issue at this address. Defaults to the Mica repository.",
+        "defaultValue": "https://github.com/rickyxu83/mica-pebble/issues/new"
       },
       {
         "type": "input",

@@ -96,7 +96,12 @@ exports.getGeminiMonthlyBudgetUsd = function() {
 }
 
 exports.getGithubIssuesUrl = function() {
-    return exports.getSetting('GITHUB_ISSUES_URL', '');
+    var value = String(exports.getSetting('GITHUB_ISSUES_URL', '') || '').replace(/^\s+|\s+$/g, '');
+    // Default: Mica's own issue tracker, so watch feedback opens a
+    // prefilled issue the author actually sees (previously a blank
+    // setting silently dropped the feedback). Users can override
+    // this URL, or set a feedback POST endpoint, in advanced settings.
+    return value || 'https://github.com/rickyxu83/mica-pebble/issues/new';
 }
 
 exports.getFeedbackPostUrl = function() {
