@@ -39,6 +39,9 @@
 
 #define PADDING 5
 #define CLARIFICATION_DICTATE_OPTION S(STR_DICTATE)
+// How many times a system-interrupted dictation restarts itself before
+// giving up and behaving as if the dictation had simply ended.
+#define DICTATION_MAX_AUTO_RESUMES 3
 
 struct SessionWindow {
   Window* window;
@@ -56,6 +59,8 @@ struct SessionWindow {
   int segments_deleted;
   bool dictation_pending;
   bool dictating_clarification;
+  bool dictation_interrupted;
+  int dictation_resume_attempts;
   int content_height;
   int last_prompt_end_offset;
   time_t query_time;
@@ -89,6 +94,7 @@ static void prv_action_menu_query(ActionMenu *action_menu, const ActionMenuItem 
 static void prv_action_menu_input(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_action_menu_report_thread(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_start_dictation(SessionWindow *sw);
+static void prv_begin_dictation(SessionWindow *sw);
 static SessionWindow* prv_active_session_window(void);
 static bool prv_submit_clarification_answer(SessionWindow *sw, const char *answer_text, const char *display_override);
 
@@ -224,7 +230,22 @@ static void prv_window_appear(Window *window) {
   }
   if (sw->dictation_pending) {
     sw->dictation_pending = false;
-    prv_start_dictation(sw);
+    prv_begin_dictation(sw);
+  }
+  if (sw->dictation_interrupted) {
+    // The system tore dictation down (e.g. a notification took over the
+    // watch) and the window is visible again: restart dictation so the
+    // user can simply continue speaking, unless the conversation has
+    // moved on to something else in the meantime.
+    sw->dictation_interrupted = false;
+    bool can_resume = sw->dictating_clarification ||
+        conversation_is_idle(conversation_manager_get_conversation(sw->manager));
+    if (can_resume && sw->dictation_resume_attempts < DICTATION_MAX_AUTO_RESUMES) {
+      sw->dictation_resume_attempts++;
+      BOBBY_LOG(APP_LOG_LEVEL_INFO, "Dictation interrupted by the system; auto-resuming (attempt %d of %d).",
+          sw->dictation_resume_attempts, DICTATION_MAX_AUTO_RESUMES);
+      prv_start_dictation(sw);
+    }
   }
 }
 
@@ -266,6 +287,8 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
   SessionWindow *sw = context;
   switch (status) {
   case DictationSessionStatusSuccess:
+    sw->dictation_interrupted = false;
+    sw->dictation_resume_attempts = 0;
     if (sw->dictating_clarification) {
       sw->dictating_clarification = false;
       if (!prv_submit_clarification_answer(sw, transcript, transcript)) {
@@ -276,14 +299,28 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
     }
     sw->query_time = time(NULL);
     break;
+  case DictationSessionStatusFailureSystemAborted:
+    // The system aborted dictation from outside the app (e.g. an incoming
+    // notification dismissed the dictation UI). This is not an error and
+    // not a user cancel: remember it so prv_window_appear can restart
+    // dictation once this window is visible again. In particular, keep
+    // dictating_clarification untouched so a resumed dictation still
+    // submits as the clarification answer it started as.
+    sw->dictation_interrupted = true;
+    BOBBY_LOG(APP_LOG_LEVEL_INFO, "Dictation aborted by the system; will auto-resume when visible.");
+    break;
   case DictationSessionStatusFailureTranscriptionRejected:
   case DictationSessionStatusFailureTranscriptionRejectedWithError:
+    sw->dictation_interrupted = false;
+    sw->dictation_resume_attempts = 0;
     sw->dictating_clarification = false;
     if (conversation_peek(conversation_manager_get_conversation(sw->manager)) == NULL) {
       window_stack_pop(true);
     }
     break;
   default:
+    sw->dictation_interrupted = false;
+    sw->dictation_resume_attempts = 0;
     sw->dictating_clarification = false;
     prv_dictation_error(sw, status);
     break;
@@ -488,6 +525,10 @@ static Window *context_window(SessionWindow *sw) {
 
 static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
   SessionWindow *sw = context;
+  if (sw) {
+    // An explicit cancel wins over any pending auto-resume.
+    sw->dictation_interrupted = false;
+  }
   if (sw && sw->dictation) {
     dictation_session_stop(sw->dictation);
   }
@@ -599,14 +640,14 @@ static void prv_select_clicked(ClickRecognizerRef recognizer, void *context) {
     const char *option = clarification->options[clarification->selected_index];
     if (strcmp(option, CLARIFICATION_DICTATE_OPTION) == 0) {
       sw->dictating_clarification = true;
-      prv_start_dictation(sw);
+      prv_begin_dictation(sw);
       return;
     }
     prv_submit_clarification_answer(sw, option, NULL);
     return;
   }
   if (conversation_is_idle(conversation_manager_get_conversation(sw->manager))) {
-    prv_start_dictation(sw);
+    prv_begin_dictation(sw);
   }
 }
 
@@ -696,7 +737,7 @@ static void prv_select_long_pressed(ClickRecognizerRef recognizer, void *context
 
 static void prv_action_menu_query(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
   SessionWindow* sw = context;
-  prv_start_dictation(sw);
+  prv_begin_dictation(sw);
 }
 
 
@@ -739,6 +780,14 @@ static void prv_cancel_timeout(SessionWindow* sw) {
 static void prv_timed_out(void *ctx) {
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Timed out");
   window_stack_pop(true);
+}
+
+static void prv_begin_dictation(SessionWindow *sw) {
+  // A dictation the user explicitly asked for starts a fresh turn: forget
+  // any interruption state left over from a previous turn.
+  sw->dictation_interrupted = false;
+  sw->dictation_resume_attempts = 0;
+  prv_start_dictation(sw);
 }
 
 static void prv_start_dictation(SessionWindow *sw) {

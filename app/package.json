@@ -1,7 +1,7 @@
 {
   "name": "mica",
   "author": "Thomas Bolger and Mica contributors",
-  "version": "0.3",
+  "version": "0.3.1",
   "keywords": [
     "pebble-app"
   ],
