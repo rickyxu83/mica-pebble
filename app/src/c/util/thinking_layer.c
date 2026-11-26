@@ -19,20 +19,23 @@
 
 #include <pebble.h>
 
+#include "face_layer.h"
 #include "memory/sdk.h"
-#include "style.h"
 
-// Three vertical wave bars - the same motif as the Mica logo - breathing
-// on a phase-shifted sine so the motion is smooth rather than mechanical.
+// The thinking indicator is the Mica face in miniature: small eyes whose
+// gaze wanders on a sine while the mouth runs a voice-wave animation.
+// One looping animation drives both, phase-shifted so the motion feels
+// organic rather than mechanical. The face lives in a child FaceLayer
+// whose frame is scaled by the reveal animation, preserving the
+// grow-in / shrink-out behaviour.
 #define WAVE_CYCLE_MS 1600
 #define REVEAL_IN_MS 200
 #define REVEAL_OUT_MS 150
-#define BAR_COUNT 3
 
 static void prv_animation_update(Animation* animation, const AnimationProgress progress);
 static void prv_reveal_update(Animation* animation, const AnimationProgress progress);
 static void prv_reveal_stopped(Animation* animation, bool finished, void* context);
-static void prv_layer_render(Layer* layer, GContext* ctx);
+static void prv_apply_reveal(ThinkingLayer *layer);
 static void prv_destroy_now(ThinkingLayer *layer);
 
 static AnimationImplementation s_animation_implementation;
@@ -45,6 +48,8 @@ typedef struct {
   AnimationProgress reveal;
   AnimationProgress reveal_from;
   AnimationProgress reveal_to;
+  FaceLayer *face;
+  GRect frame;
   bool dismissing;
 } ThinkingLayerData;
 
@@ -64,7 +69,13 @@ ThinkingLayer* thinking_layer_create(GRect rect) {
   data->reveal = 0;
   data->reveal_from = 0;
   data->reveal_to = ANIMATION_NORMALIZED_MAX;
+  data->frame = rect;
   data->dismissing = false;
+  // The face starts at zero size in the centre; the reveal animation
+  // grows it to the full frame (see prv_apply_reveal).
+  data->face = face_layer_create(GRect(rect.size.w / 2, rect.size.h / 2, 0, 0));
+  face_layer_set_expression(data->face, FaceEyeSmall, FaceMouthWave, 0, 0, 0);
+  layer_add_child(layer, face_layer_get_layer(data->face));
   data->animation = animation_create();
   animation_set_curve(data->animation, AnimationCurveLinear);
   animation_set_duration(data->animation, WAVE_CYCLE_MS);
@@ -74,7 +85,6 @@ ThinkingLayer* thinking_layer_create(GRect rect) {
                                               .stopped = NULL,
 }, layer);
   animation_set_implementation(data->animation, &s_animation_implementation);
-  layer_set_update_proc(layer, prv_layer_render);
   animation_schedule(data->animation);
 
   // Grow in instead of popping into existence.
@@ -100,6 +110,11 @@ static void prv_destroy_now(ThinkingLayer *layer) {
   if (data->animation) {
     animation_destroy(data->animation);
     data->animation = NULL;
+  }
+  // layer_destroy does not destroy children, so the face goes first.
+  if (data->face) {
+    face_layer_destroy(data->face);
+    data->face = NULL;
   }
   layer_destroy(layer);
 }
@@ -144,11 +159,37 @@ void thinking_layer_dismiss(ThinkingLayer *layer) {
   animation_schedule(data->reveal_animation);
 }
 
+// Scales the child face's frame by the current reveal fraction,
+// centred in the layer's frame.
+static void prv_apply_reveal(ThinkingLayer *layer) {
+  ThinkingLayerData* data = layer_get_data(layer);
+  if (!data->face) {
+    return;
+  }
+  int16_t face_w = (int16_t)((int32_t)data->frame.size.w *
+      (int32_t)data->reveal / (int32_t)ANIMATION_NORMALIZED_MAX);
+  int16_t face_h = (int16_t)((int32_t)data->frame.size.h *
+      (int32_t)data->reveal / (int32_t)ANIMATION_NORMALIZED_MAX);
+  layer_set_frame(face_layer_get_layer(data->face),
+      GRect(data->frame.size.w / 2 - face_w / 2,
+          data->frame.size.h / 2 - face_h / 2, face_w, face_h));
+}
+
 static void prv_animation_update(Animation* animation, const AnimationProgress progress) {
   ThinkingLayer* layer = animation_get_context(animation);
   ThinkingLayerData* data = layer_get_data(layer);
   data->progress = progress;
-  layer_mark_dirty(layer);
+  if (!data->face) {
+    return;
+  }
+  const uint32_t angle = (uint32_t)((uint64_t)progress * TRIG_MAX_ANGLE /
+      ANIMATION_NORMALIZED_MAX);
+  const int16_t look_x = (int16_t)(3 * sin_lookup(angle) / TRIG_MAX_RATIO);
+  const int16_t look_y = (int16_t)(2 *
+      sin_lookup((angle * 2) % TRIG_MAX_ANGLE) / TRIG_MAX_RATIO);
+  const uint32_t wave_phase = (angle * 2) % TRIG_MAX_ANGLE;
+  face_layer_set_expression(data->face, FaceEyeSmall, FaceMouthWave,
+      look_x, look_y, wave_phase);
 }
 
 static void prv_reveal_update(Animation* animation, const AnimationProgress progress) {
@@ -157,7 +198,7 @@ static void prv_reveal_update(Animation* animation, const AnimationProgress prog
   data->reveal = data->reveal_from +
       (AnimationProgress)(((int32_t)data->reveal_to - (int32_t)data->reveal_from) *
           (int32_t)progress / (int32_t)ANIMATION_NORMALIZED_MAX);
-  layer_mark_dirty(layer);
+  prv_apply_reveal(layer);
 }
 
 static void prv_reveal_stopped(Animation* animation, bool finished, void* context) {
@@ -169,47 +210,9 @@ static void prv_reveal_stopped(Animation* animation, bool finished, void* contex
   }
   data->reveal_animation = NULL;
   data->reveal = data->reveal_to;
+  prv_apply_reveal(layer);
   animation_destroy(animation);
   if (data->dismissing) {
     prv_destroy_now(layer);
-  }
-}
-
-static void prv_draw_bar(GContext* ctx, int center_x, int center_y, int width, int height) {
-  if (height < 2) {
-    return;
-  }
-  int radius = width / 2;
-  if (height <= width) {
-    graphics_fill_circle(ctx, GPoint(center_x, center_y), height / 2);
-    return;
-  }
-  int top = center_y - height / 2;
-  graphics_fill_rect(ctx, GRect(center_x - radius, top + radius, width, height - width), 0, GCornerNone);
-  graphics_fill_circle(ctx, GPoint(center_x, top + radius), radius);
-  graphics_fill_circle(ctx, GPoint(center_x, top + height - radius), radius);
-}
-
-static void prv_layer_render(Layer* layer, GContext* ctx) {
-  ThinkingLayerData* data = layer_get_data(layer);
-  GRect bounds = layer_get_bounds(layer);
-  graphics_context_set_fill_color(ctx, COLOR_FALLBACK(mica_theme_deep_accent(), GColorBlack));
-  const int slot_w = bounds.size.w / BAR_COUNT;
-  const int bar_w = slot_w / 3;
-  const int min_h = 4;
-  const int max_h = bounds.size.h;
-  const int bottom_y = bounds.origin.y + bounds.size.h;
-  for (int i = 0; i < BAR_COUNT; ++i) {
-    uint32_t angle = (uint32_t)(((uint64_t)data->progress * TRIG_MAX_ANGLE /
-        ANIMATION_NORMALIZED_MAX) + (uint64_t)i * (TRIG_MAX_ANGLE / BAR_COUNT)) % TRIG_MAX_ANGLE;
-    int32_t sine = sin_lookup(angle);
-    int height = min_h + (int)(((int32_t)(max_h - min_h) * (sine + TRIG_MAX_RATIO)) /
-        (2 * TRIG_MAX_RATIO));
-    height = (int)((int32_t)height * (int32_t)data->reveal / (int32_t)ANIMATION_NORMALIZED_MAX);
-    int center_x = bounds.origin.x + i * slot_w + slot_w / 2;
-    // Bottom-anchored like an equaliser (and like the logo's bars): the
-    // bars grow up from a shared baseline, which reads as a waveform
-    // rather than as bouncing dots.
-    prv_draw_bar(ctx, center_x, bottom_y - height / 2, bar_w, height);
   }
 }

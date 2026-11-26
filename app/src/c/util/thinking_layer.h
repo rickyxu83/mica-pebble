@@ -19,9 +19,10 @@
 
 #include <pebble.h>
 
-// These are recommendations - it will scale to any size.
+// These are recommendations - it will scale to any size. The height
+// fits the mini thinking face (see util/face_layer.h).
 #define THINKING_LAYER_WIDTH 48
-#define THINKING_LAYER_HEIGHT 24
+#define THINKING_LAYER_HEIGHT 44
 
 typedef Layer ThinkingLayer;
 
