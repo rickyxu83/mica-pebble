@@ -12,9 +12,23 @@
  * ever recorded.
  */
 
+var config = require('../config');
+
 var STORAGE_KEY = 'mica_diagnostics_events';
 var MAX_EVENTS = 120;
 var MAX_DETAIL_LENGTH = 300;
+
+// Collection is opt-in: events are recorded only while the user has the
+// Diagnostics log toggle (DIAGNOSTICS_ENABLED) on in settings. Default off.
+function isEnabled() {
+    try {
+        return !!config.getSetting('DIAGNOSTICS_ENABLED', false);
+    } catch (e) {
+        return false;
+    }
+}
+
+exports.isEnabled = isEnabled;
 
 function loadEvents() {
     try {
@@ -58,6 +72,9 @@ function formatClock(timestamp) {
 // 'provider_error', 'exception', ...); detail is a short human-readable
 // string. Never pass API keys or credentials.
 exports.record = function(type, detail) {
+    if (!isEnabled()) {
+        return;
+    }
     try {
         var events = loadEvents();
         events.push({
@@ -91,12 +108,12 @@ exports.clear = function() {
 // (at the end) is easy to find and read.
 exports.formatReport = function() {
     var lines = [];
-    lines.push('Mica diagnostics');
-    lines.push('Generated: ' + new Date().toString());
+    lines.push('Mica diagnostics 诊断日志');
+    lines.push('生成时间 Generated: ' + new Date().toString());
     try {
         var packageJson = require('package.json');
         if (packageJson && packageJson.version) {
-            lines.push('App version: ' + packageJson.version);
+            lines.push('应用版本 App version: ' + packageJson.version);
         }
     } catch (e) {
         // Version is nice to have, not essential.
@@ -104,13 +121,13 @@ exports.formatReport = function() {
     var events = loadEvents();
     if (events.length === 0) {
         lines.push('');
-        lines.push('No diagnostics events recorded.');
+        lines.push('暂无诊断事件记录。No diagnostics events recorded.');
         return lines.join('\n');
     }
-    lines.push('Events: ' + events.length + ' (oldest first, most recent session last)');
+    lines.push('事件 Events: ' + events.length + '（最早在前，最新会话在最后；oldest first, most recent session last）');
     events.forEach(function(event) {
         if (event.type === 'session_start') {
-            lines.push('--- new session ---');
+            lines.push('--- 新会话 new session ---');
         }
         lines.push('[' + formatClock(event.ts) + '] ' + event.type + ': ' + event.detail);
     });

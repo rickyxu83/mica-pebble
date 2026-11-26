@@ -69,7 +69,26 @@ assert.strictEqual(watchTools.shouldExpose('cancel my timer'), true);
 assert.strictEqual(watchTools.shouldExpose('hello there'), false);
 console.log('SHOULDEXPOSE TESTS PASSED');
 
+// ---- diagnostics opt-in gate: off means zero collection ----
+function setDiagnosticsEnabled(on) {
+    store['clay-settings'] = JSON.stringify({DIAGNOSTICS_ENABLED: on});
+}
+delete store['clay-settings'];
+diagnostics.clear();
+diagnostics.record('session_start', 'thread=test');
+assert.strictEqual(diagnostics.getEvents().length, 0, 'unset toggle defaults to off: nothing recorded');
+assert.ok(!('mica_diagnostics_events' in store), 'off: storage key never written');
+setDiagnosticsEnabled(false);
+diagnostics.record('prompt', '提醒我10点钟起床');
+assert.strictEqual(diagnostics.getEvents().length, 0, 'explicitly off: nothing recorded');
+assert.ok(!('mica_diagnostics_events' in store), 'explicitly off: storage key never written');
+setDiagnosticsEnabled(true);
+diagnostics.record('session_start', 'thread=test');
+assert.strictEqual(diagnostics.getEvents().length, 1, 'on: events recorded again');
+console.log('DIAGNOSTICS GATE TESTS PASSED');
+
 // ---- diagnostics module basics ----
+setDiagnosticsEnabled(true);
 diagnostics.clear();
 assert.strictEqual(diagnostics.getEvents().length, 0);
 diagnostics.record('session_start', 'thread=test');
@@ -89,6 +108,7 @@ assert.ok(diagnostics.formatReport().indexOf('No diagnostics events recorded.') 
 console.log('DIAGNOSTICS MODULE TESTS PASSED');
 
 // ---- end-to-end: a Chinese set_reminder tool call leaves a full trace ----
+setDiagnosticsEnabled(true);
 diagnostics.clear();
 diagnostics.record('session_start', 'thread=test');
 diagnostics.record('prompt', '提醒我10点钟起床');

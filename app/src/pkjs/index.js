@@ -34,7 +34,7 @@ var diagnostics = require('./agent/diagnostics');
 // the object before Clay's own showConfiguration handler runs (this
 // listener is registered first) keeps the page current. The report itself
 // never becomes a setting, so it is never sent to the watch.
-var diagnosticsUserData = {diagnosticsReport: 'No diagnostics recorded yet.'};
+var diagnosticsUserData = {diagnosticsReport: '暂无诊断记录。No diagnostics recorded yet.'};
 
 function refreshDiagnosticsReport() {
     try {

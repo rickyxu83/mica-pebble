@@ -6,7 +6,7 @@
   },
   {
     "type": "text",
-    "defaultValue": "选择服务商并填入 Key 即可。Key 仅保存在本机，请求直接从手机发往 Provider，不经过 Mica 服务器。"
+    "defaultValue": "选择服务商并填入 Key 即可。Key 仅保存在本机，请求直接从手机发往 Provider，不经过 Mica 服务器。Choose a provider and enter your key. Keys stay on this phone; requests go directly to the provider, never through a Mica server."
   },
   {
     "type": "section",
@@ -15,8 +15,8 @@
         "type": "select",
         "id": "LLM_PROVIDER",
         "messageKey": "LLM_PROVIDER",
-        "label": "AI 服务商",
-        "description": "选择模型服务。Key 仅保存在手机本地，请求直接发往所选 Provider，不经过 Mica 服务器，无订阅费。",
+        "label": "AI 服务商 Provider",
+        "description": "选择模型服务。Key 仅保存在手机本地，请求直接发往所选 Provider，不经过 Mica 服务器，无订阅费。Choose the model service. Your key is stored only on this phone; requests go directly to the selected provider. No Mica server, no subscription fee.",
         "defaultValue": "gemini",
         "options": [
           {
@@ -24,7 +24,7 @@
             "value": "gemini"
           },
           {
-            "label": "OpenAI 兼容（DeepSeek / Kimi / Qwen / Ollama…）",
+            "label": "OpenAI 兼容 OpenAI-compatible（DeepSeek / Kimi / Qwen / Ollama…）",
             "value": "openai"
           },
           {
@@ -37,12 +37,12 @@
         "type": "select",
         "id": "OPENAI_SERVICE",
         "messageKey": "OPENAI_SERVICE",
-        "label": "兼容服务",
-        "description": "选择后自动填入官方地址和推荐模型；通常只需再填 API Key。",
+        "label": "兼容服务 Compatible service",
+        "description": "选择后自动填入官方地址和推荐模型；通常只需再填 API Key。Selecting a service fills in its official endpoint and recommended model; usually you only need to add your API key.",
         "defaultValue": "deepseek",
         "options": [
           {
-            "label": "DeepSeek（推荐）",
+            "label": "DeepSeek（推荐 Recommended）",
             "value": "deepseek"
           },
           {
@@ -54,7 +54,7 @@
             "value": "kimi"
           },
           {
-            "label": "Kimi 编程版（kimi.com 订阅）",
+            "label": "Kimi 编程版 Kimi Code（kimi.com 订阅 subscription）",
             "value": "kimicoding"
           },
           {
@@ -66,15 +66,15 @@
             "value": "openrouter"
           },
           {
-            "label": "Ollama（本机）",
+            "label": "Ollama（本机 Local）",
             "value": "ollama"
           },
           {
-            "label": "LM Studio（本机）",
+            "label": "LM Studio（本机 Local）",
             "value": "lmstudio"
           },
           {
-            "label": "其他 OpenAI 兼容端点",
+            "label": "其他 OpenAI 兼容端点 Other OpenAI-compatible endpoint",
             "value": "custom"
           }
         ]
@@ -83,24 +83,24 @@
         "type": "toggle",
         "id": "SHOW_ADVANCED",
         "messageKey": "SHOW_ADVANCED",
-        "label": "显示高级设置",
-        "description": "默认折叠端点、模型、Runtime 和反馈等高级项，普通使用无需展开。",
+        "label": "显示高级设置 Show advanced settings",
+        "description": "默认折叠端点、模型、运行时等高级项，普通使用无需展开。Advanced items such as endpoints, models and runtime are collapsed by default; most users never need to open them.",
         "defaultValue": false
       },
       {
         "type": "heading",
-        "defaultValue": "Assistant"
+        "defaultValue": "助手 Assistant"
       },
       {
         "type": "select",
         "id": "ASSISTANT_RUNTIME",
         "messageKey": "ASSISTANT_RUNTIME",
-        "label": "运行时（高级）",
-        "description": "默认 Companionless：只用手表 App 和手机即可运行，无需安装额外 companion。",
+        "label": "运行时 Runtime（高级 Advanced）",
+        "description": "默认 Companionless：只用手表 App 和手机即可运行，无需安装额外 companion。Default is Companionless: runs with just the watch app and your phone, no extra companion app to install.",
         "defaultValue": "companionless",
         "options": [
           {
-            "label": "Automatic",
+            "label": "自动 Automatic",
             "value": "automatic"
           },
           {
@@ -117,8 +117,8 @@
         "type": "input",
         "id": "GEMINI_API_KEY",
         "messageKey": "GEMINI_API_KEY",
-        "label": "Gemini API Key",
-        "description": "仅保存在手机本地。",
+        "label": "Gemini API 密钥 API Key",
+        "description": "仅保存在手机本地。Stored only on this phone.",
         "defaultValue": "",
         "attributes": {
           "type": "password",
@@ -131,16 +131,16 @@
         "type": "input",
         "id": "GEMINI_MODEL",
         "messageKey": "GEMINI_MODEL",
-        "label": "Gemini 模型（高级）",
-        "description": "The Gemini API model used by the local assistant runtime.",
+        "label": "Gemini 模型 Model（高级 Advanced）",
+        "description": "本地助手运行时使用的 Gemini API 模型。The Gemini API model used by the local assistant runtime.",
         "defaultValue": "gemini-3.1-flash-lite"
       },
       {
         "type": "input",
         "id": "OPENAI_API_KEY",
         "messageKey": "OPENAI_API_KEY",
-        "label": "API Key（OpenAI 兼容）",
-        "description": "仅保存在手机本地。Ollama / LM Studio 可填任意非空占位符。",
+        "label": "API 密钥 API Key（OpenAI 兼容）",
+        "description": "仅保存在手机本地。Ollama / LM Studio 可填任意非空占位符。Stored only on this phone. For Ollama / LM Studio, any non-empty placeholder works.",
         "defaultValue": "",
         "attributes": {
           "type": "password",
@@ -153,24 +153,24 @@
         "type": "input",
         "id": "OPENAI_BASE_URL",
         "messageKey": "OPENAI_BASE_URL",
-        "label": "API 地址（高级 / 自定义）",
-        "description": "标准服务商会自动填写，无需修改。自定义端点需兼容 /v1/chat/completions；本机服务填写局域网地址。",
+        "label": "API 地址 Base URL（高级 / 自定义 Advanced / Custom）",
+        "description": "标准服务商会自动填写，无需修改。自定义端点需兼容 /v1/chat/completions；本机服务填写局域网地址。Filled in automatically for standard services. A custom endpoint must support /v1/chat/completions; for local services, use the LAN address.",
         "defaultValue": ""
       },
       {
         "type": "input",
         "id": "OPENAI_MODEL",
         "messageKey": "OPENAI_MODEL",
-        "label": "模型（高级 / 自定义）",
-        "description": "Examples: gpt-4o-mini · deepseek-chat · moonshot-v1-8k · qwen-plus · llama3.1",
+        "label": "模型 Model（高级 / 自定义 Advanced / Custom）",
+        "description": "示例 Examples: gpt-4o-mini · deepseek-chat · moonshot-v1-8k · qwen-plus · llama3.1",
         "defaultValue": "deepseek-chat"
       },
       {
         "type": "input",
         "id": "CLAUDE_API_KEY",
         "messageKey": "CLAUDE_API_KEY",
-        "label": "Claude API Key",
-        "description": "仅保存在手机本地。",
+        "label": "Claude API 密钥 API Key",
+        "description": "仅保存在手机本地。Stored only on this phone.",
         "defaultValue": "",
         "attributes": {
           "type": "password",
@@ -183,40 +183,40 @@
         "type": "input",
         "id": "CLAUDE_MODEL",
         "messageKey": "CLAUDE_MODEL",
-        "label": "Claude 模型（高级）",
-        "description": "Examples: claude-sonnet-4-5 · claude-haiku-4-5",
+        "label": "Claude 模型 Model（高级 Advanced）",
+        "description": "示例 Examples: claude-sonnet-4-5 · claude-haiku-4-5",
         "defaultValue": "claude-sonnet-4-5"
       },
       {
         "type": "input",
         "id": "GEMINI_MONTHLY_BUDGET_USD",
         "messageKey": "GEMINI_MONTHLY_BUDGET_USD",
-        "label": "Gemini 月预算（高级）",
-        "description": "Used only for Mica's local estimate on the Quota screen. Google AI Studio billing is authoritative.",
+        "label": "Gemini 月预算 Monthly budget（高级 Advanced）",
+        "description": "仅用于 Mica 在用量页的本地估算，以 Google AI Studio 账单为准。Used only for Mica's local estimate on the Quota screen. Google AI Studio billing is authoritative.",
         "defaultValue": "10"
       },
       {
         "type": "input",
         "id": "NOMINATIM_BASE_URL",
         "messageKey": "NOMINATIM_BASE_URL",
-        "label": "Geocoding service base URL (advanced)",
-        "description": "Leave blank for the public OpenStreetMap Nominatim service. Set a compatible alternative to change providers without an app update. Public-service rate limits and attribution requirements apply.",
+        "label": "地理编码服务地址 Geocoding service base URL（高级 Advanced）",
+        "description": "留空使用公共 OpenStreetMap Nominatim 服务；也可填兼容的替代服务，无需更新 App 即可切换。公共服务有速率限制与署名要求。Leave blank for the public OpenStreetMap Nominatim service. Set a compatible alternative to change providers without an app update. Public-service rate limits and attribution requirements apply.",
         "defaultValue": ""
       },
       {
         "type": "input",
         "id": "STATIC_MAP_BASE_URL",
         "messageKey": "STATIC_MAP_BASE_URL",
-        "label": "Static map service URL (advanced)",
-        "description": "Leave blank for staticmap.openstreetmap.de. Set a compatible staticmap.php endpoint if your map provider changes.",
+        "label": "静态地图服务地址 Static map service URL（高级 Advanced）",
+        "description": "留空使用 staticmap.openstreetmap.de；地图服务变更时可填兼容的 staticmap.php 端点。Leave blank for staticmap.openstreetmap.de. Set a compatible staticmap.php endpoint if your map provider changes.",
         "defaultValue": ""
       },
       {
         "type": "input",
         "id": "USER_PROFILE_CONTEXT",
         "messageKey": "USER_PROFILE_CONTEXT",
-        "label": "助手记忆（高级）",
-        "description": "Optional companionless memory/profile notes Mica should use, such as preferred name, home timezone, family names, pets, or preferences. Stored locally by the Pebble phone app.",
+        "label": "助手记忆 Assistant memory（高级 Advanced）",
+        "description": "可选的助手记忆/档案备注，如称呼、时区、家人名字、宠物或偏好。仅保存在手机本地。Optional memory/profile notes Mica should use, such as preferred name, home timezone, family names, pets, or preferences. Stored locally by the Pebble phone app.",
         "defaultValue": ""
       }
     ]
@@ -233,15 +233,15 @@
         "id": "UI_LANGUAGE",
         "messageKey": "UI_LANGUAGE",
         "label": "手表界面语言 / Watch UI language",
-        "description": "默认简体中文。切换后重新打开 Mica 生效；已内置中文字体，无需安装语言包。",
+        "description": "默认简体中文。切换后重新打开 Mica 生效；已内置中文字体，无需安装语言包。Simplified Chinese by default. Reopen Mica to apply; Chinese fonts are built in, no language pack needed.",
         "defaultValue": "1",
         "options": [
           {
-            "label": "简体中文",
+            "label": "简体中文 Simplified Chinese",
             "value": "1"
           },
           {
-            "label": "English",
+            "label": "英语 English",
             "value": "0"
           }
         ]
@@ -251,7 +251,7 @@
         "id": "THEME_COLOUR",
         "messageKey": "THEME_COLOUR",
         "label": "主题颜色 / Theme colour",
-        "description": "页面底色与品牌色。切换后新打开的页面生效，重新打开 Mica 后全面生效。",
+        "description": "页面底色与品牌色。切换后新打开的页面生效，重新打开 Mica 后全面生效。Page background and accent colour. Applies to newly opened pages; reopen Mica to apply everywhere.",
         "defaultValue": "1",
         "options": [
           {
@@ -277,27 +277,27 @@
         "id": "IDLE_EXIT_TIMEOUT",
         "messageKey": "IDLE_EXIT_TIMEOUT",
         "label": "待机自动返回表盘 / Idle auto-exit",
-        "description": "停留在首页无操作时自动退出 Mica 回到表盘（系统超时对 Mica 不生效，由应用自身计时）。离开首页即停止计时，回到首页重新计时。",
+        "description": "停留在首页无操作时自动退出 Mica 回到表盘（系统超时对 Mica 不生效，由应用自身计时）。离开首页即停止计时，回到首页重新计时。When idle on the home screen, Mica exits back to the watchface (the system timeout does not apply to Mica, so the app times this itself). Leaving the home screen stops the timer; returning restarts it.",
         "defaultValue": "30",
         "options": [
           {
-            "label": "30 秒（默认）",
+            "label": "30 秒（默认）30 seconds (default)",
             "value": "30"
           },
           {
-            "label": "1 分钟",
+            "label": "1 分钟 1 minute",
             "value": "60"
           },
           {
-            "label": "20 秒",
+            "label": "20 秒 20 seconds",
             "value": "20"
           },
           {
-            "label": "15 秒",
+            "label": "15 秒 15 seconds",
             "value": "15"
           },
           {
-            "label": "关闭",
+            "label": "关闭 Off",
             "value": "0"
           }
         ]
@@ -306,20 +306,20 @@
         "type": "toggle",
         "id": "USE_SYSTEM_CJK_FONT",
         "messageKey": "USE_SYSTEM_CJK_FONT",
-        "label": "使用系统字体（已装中文语言包）",
-        "description": "已安装中文语言包就开启：用系统字体显示中文，字库更全，不再有方块字。切换后重新打开 Mica 生效。",
+        "label": "使用系统字体 Use system font（已装中文语言包）",
+        "description": "已安装中文语言包就开启：用系统字体显示中文，字库更全，不再有方块字。切换后重新打开 Mica 生效。If you have a Chinese language pack installed, turn this on to render Chinese with the system font for fuller glyph coverage. Reopen Mica to apply.",
         "defaultValue": false
       },
       {
         "type": "select",
         "id": "languageCode",
         "messageKey": "LANGUAGE_CODE",
-        "label": "AI 回复语言",
-        "description": "控制 AI 回复语言，Automatic 会跟随提问语言。手表界面语言由上一项单独设置。",
+        "label": "AI 回复语言 AI reply language",
+        "description": "控制 AI 回复语言，Automatic 会跟随提问语言。手表界面语言由上一项单独设置。Controls the language of AI replies; Automatic follows the language you ask in. The watch UI language is set separately above.",
         "defaultValue": "zh_CN",
         "options": [
           {
-            "label": "Automatic / 自动",
+            "label": "自动 Automatic",
             "value": ""
           },
           {
@@ -456,28 +456,28 @@
         "type": "select",
         "id": "unitPreference",
         "messageKey": "UNIT_PREFERENCE",
-        "label": "Unit preference",
-        "description": "Your preferred units. If 'both', units will be provided in both systems.",
+        "label": "单位偏好 Unit preference",
+        "description": "你偏好的单位制。选 Both 时两种单位都会给出。Your preferred units. If 'both', units will be provided in both systems.",
         "defaultValue": "",
         "options": [
           {
-            "label": "Automatic",
+            "label": "自动 Automatic",
             "value": ""
           },
           {
-            "label": "Metric",
+            "label": "公制 Metric",
             "value": "metric"
           },
           {
-            "label": "Imperial",
+            "label": "英制 Imperial",
             "value": "imperial"
           },
           {
-            "label": "UK",
+            "label": "英国 UK",
             "value": "uk"
           },
           {
-            "label": "Both",
+            "label": "两者 Both",
             "value": "both"
           }
         ]
@@ -489,12 +489,12 @@
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Behaviour"
+        "defaultValue": "行为 Behaviour"
       },
       {
         "type": "select",
         "messageKey": "ALARM_VIBE_PATTERN",
-        "label": "Alarm vibration",
+        "label": "闹钟震动 Alarm vibration",
         "defaultValue": "5",
         "options": [
           {
@@ -514,7 +514,7 @@
             "value": "4"
           },
           {
-            "label": "Standard",
+            "label": "标准 Standard",
             "value": "5"
           }
         ]
@@ -522,7 +522,7 @@
       {
         "type": "select",
         "messageKey": "TIMER_VIBE_PATTERN",
-        "label": "Timer vibration",
+        "label": "计时器震动 Timer vibration",
         "defaultValue": "5",
         "options": [
           {
@@ -542,7 +542,7 @@
             "value": "4"
           },
           {
-            "label": "Standard",
+            "label": "标准 Standard",
             "value": "5"
           }
         ]
@@ -550,20 +550,20 @@
       {
         "type": "select",
         "messageKey": "QUICK_LAUNCH_BEHAVIOUR",
-        "label": "Quick launch behaviour",
-        "description": "What to do when Mica is launched via Quick Launch. If 'start conversation' is selected, Mica will start listening immediately. If 'stay open' is chosen, Mica will quit after a minute of inactivity. If 'open home screen' is chosen, Mica will behave the same as if launched from the app launcher.",
+        "label": "快速启动行为 Quick launch behaviour",
+        "description": "通过 Quick Launch 启动 Mica 时的行为。选“开始对话”会立即开始聆听；选“保持开启”时 Mica 会在闲置一分钟后退出；选“打开主页”则与从应用列表启动相同。What to do when Mica is launched via Quick Launch. If 'start conversation' is selected, Mica will start listening immediately. If 'stay open' is chosen, Mica will quit after a minute of inactivity. If 'open home screen' is chosen, Mica will behave the same as if launched from the app launcher.",
         "defaultValue": "1",
         "options": [
           {
-            "label": "Start conversation and time out",
+            "label": "开始对话并超时退出 Start conversation and time out",
             "value": "1"
           },
           {
-            "label": "Start conversation then stay open",
+            "label": "开始对话并保持开启 Start conversation then stay open",
             "value": "2"
           },
           {
-            "label": "Open home screen",
+            "label": "打开主页 Open home screen",
             "value": "3"
           }
         ]
@@ -572,8 +572,8 @@
         "type": "toggle",
         "messageKey": "CONFIRM_TRANSCRIPTS",
         "defaultValue": false,
-        "label": "Confirm prompts before responding",
-        "description": "When enabled, after dictating to the watch, you'll always be asked to confirm your input before Mica takes action. When disabled, Mica will respond immediately to whatever was recognised."
+        "label": "回复前确认输入 Confirm prompts before responding",
+        "description": "开启后，每次听写完都会先让你确认识别内容，确认后 Mica 才执行。关闭时 Mica 直接按识别结果回复。When enabled, after dictating to the watch, you'll always be asked to confirm your input before Mica takes action. When disabled, Mica will respond immediately to whatever was recognised."
       },
       {
         "type": "toggle",
@@ -581,7 +581,7 @@
         "messageKey": "QUIET_LISTEN",
         "defaultValue": true,
         "label": "听写时自动勿扰 / Quiet Time while dictating",
-        "description": "开始听写前自动开启手表勿扰并隐藏通知显示，听写结束恢复原状，避免通知弹窗打断听写。经手机 Pebble 应用的 Watch Settings 插件生效；插件不可用时自动跳过，不影响听写。"
+        "description": "开始听写前自动开启手表勿扰并隐藏通知显示，听写结束恢复原状，避免通知弹窗打断听写。经手机 Pebble 应用的 Watch Settings 插件生效；插件不可用时自动跳过，不影响听写。Before dictation starts, watch Do Not Disturb is turned on and notifications are hidden; both are restored when dictation ends, so notification popups cannot interrupt dictation. Works through the Watch Settings plugin in the Pebble phone app; if the plugin is unavailable this is skipped silently."
       }
     ]
   },
@@ -590,14 +590,14 @@
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Permissions"
+        "defaultValue": "权限 Permissions"
       },
       {
         "type": "toggle",
         "messageKey": "LOCATION_ENABLED",
         "defaultValue": true,
-        "label": "Allow location access",
-        "description": "Mica can use your location to provide contextually relevant information, including local weather and transit as well as more broadly understanding your local context."
+        "label": "允许位置访问 Allow location access",
+        "description": "Mica 可使用你的位置提供与场景相关的信息，包括本地天气、交通，以及更广泛的本地上下文。Mica can use your location to provide contextually relevant information, including local weather and transit as well as more broadly understanding your local context."
       }
     ]
   },
@@ -606,29 +606,37 @@
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Diagnostics"
+        "defaultValue": "诊断 Diagnostics"
+      },
+      {
+        "type": "toggle",
+        "id": "DIAGNOSTICS_ENABLED",
+        "messageKey": "DIAGNOSTICS_ENABLED",
+        "label": "诊断日志 Diagnostics log",
+        "description": "开启后才收集诊断记录；关闭时不记录任何事件。默认关闭。已有记录仍可在下方查看。Diagnostics are collected only while this is on; when off, no events are recorded. Off by default. Existing records can still be viewed below.",
+        "defaultValue": false
       },
       {
         "type": "text",
-        "defaultValue": "Recent session events recorded on this phone: prompts, tool decisions, watch replies and errors. Stored only in the local diagnostics log; nothing is sent anywhere. If something goes wrong, copy the text below into a bug report."
+        "defaultValue": "本机记录的近期会话事件：提问、工具决策、手表回复与错误。仅保存在本地诊断日志，不会发送到任何地方。出错时可把下方文本复制到问题报告中。Recent session events recorded on this phone: prompts, tool decisions, watch replies and errors. Stored only in the local diagnostics log; nothing is sent anywhere. If something goes wrong, copy the text below into a bug report."
       },
       {
         "type": "text",
         "id": "DIAGNOSTICS_TEXT",
-        "defaultValue": "No diagnostics recorded yet."
+        "defaultValue": "暂无诊断记录。No diagnostics recorded yet."
       },
       {
         "type": "toggle",
         "id": "CLEAR_DIAGNOSTICS",
         "messageKey": "CLEAR_DIAGNOSTICS",
-        "label": "Clear diagnostics log",
-        "description": "Turn this on and tap Save to erase the recorded diagnostics events.",
+        "label": "清空诊断日志 Clear diagnostics log",
+        "description": "开启此项并点保存，即可抹除已记录的诊断事件。Turn this on and tap Save to erase the recorded diagnostics events.",
         "defaultValue": false
       }
     ]
   },
   {
     "type": "submit",
-    "defaultValue": "Save"
+    "defaultValue": "保存 Save"
   }
 ]

@@ -180,7 +180,8 @@
       "QUIET_LISTEN",
       "QUIET_START",
       "QUIET_STOP",
-      "QUIET_READY"
+      "QUIET_READY",
+      "DIAGNOSTICS_ENABLED"
     ],
     "resources": {
       "media": [
