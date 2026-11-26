@@ -590,6 +590,14 @@
         "defaultValue": false,
         "label": "Confirm prompts before responding",
         "description": "When enabled, after dictating to the watch, you'll always be asked to confirm your input before Mica takes action. When disabled, Mica will respond immediately to whatever was recognised."
+      },
+      {
+        "type": "toggle",
+        "id": "QUIET_LISTEN",
+        "messageKey": "QUIET_LISTEN",
+        "defaultValue": true,
+        "label": "听写时自动勿扰 / Quiet Time while dictating",
+        "description": "开始听写前自动开启手表勿扰并隐藏通知显示，听写结束恢复原状，避免通知弹窗打断听写。经手机 Pebble 应用的 Watch Settings 插件生效；插件不可用时自动跳过，不影响听写。"
       }
     ]
   },

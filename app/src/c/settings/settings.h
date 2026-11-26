@@ -50,4 +50,5 @@ ThemeColour settings_get_theme_colour();
 int settings_get_idle_exit_timeout();
 int settings_get_ui_language();
 bool settings_get_use_system_cjk_font();
+bool settings_get_quiet_listen();
 const char* settings_get_assistant_runtime();

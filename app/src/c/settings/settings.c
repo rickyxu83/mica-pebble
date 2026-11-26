@@ -96,6 +96,16 @@ bool settings_get_use_system_cjk_font() {
   return persist_read_bool(PERSIST_KEY_USE_SYSTEM_CJK_FONT);
 }
 
+bool settings_get_quiet_listen() {
+  // Default ON: dictation is Mica's main input and a single notification
+  // popup aborts it, so hold notifications back while dictating unless
+  // the user turned this off in settings.
+  if (!persist_exists(PERSIST_KEY_QUIET_LISTEN)) {
+    return true;
+  }
+  return persist_read_bool(PERSIST_KEY_QUIET_LISTEN);
+}
+
 int settings_get_ui_language() {
   if (!persist_exists(PERSIST_KEY_UI_LANGUAGE)) {
     return 1;
@@ -130,6 +140,8 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
       persist_write_int(PERSIST_KEY_THEME_COLOUR, atoi(tuple->value->cstring));
     } else if (tuple->key == MESSAGE_KEY_IDLE_EXIT_TIMEOUT) {
       persist_write_int(PERSIST_KEY_IDLE_EXIT_TIMEOUT, atoi(tuple->value->cstring));
+    } else if (tuple->key == MESSAGE_KEY_QUIET_LISTEN) {
+      persist_write_bool(PERSIST_KEY_QUIET_LISTEN, tuple->value->int8);
     } else if (tuple->key == MESSAGE_KEY_UI_LANGUAGE) {
       // Applied on the next app launch so custom fonts reload consistently.
       persist_write_int(PERSIST_KEY_UI_LANGUAGE, atoi(tuple->value->cstring));

@@ -186,7 +186,11 @@
       "UI_LANGUAGE",
       "THEME_COLOUR",
       "IDLE_EXIT_TIMEOUT",
-      "CLEAR_DIAGNOSTICS"
+      "CLEAR_DIAGNOSTICS",
+      "QUIET_LISTEN",
+      "QUIET_START",
+      "QUIET_STOP",
+      "QUIET_READY"
     ],
     "resources": {
       "media": [

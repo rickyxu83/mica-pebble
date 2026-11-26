@@ -34,6 +34,7 @@
 #include "../features.h"
 
 #include <pebble.h>
+#include <pebble-events/pebble-events.h>
 
 #include "report_window.h"
 
@@ -71,6 +72,10 @@
 // How many times a system-interrupted dictation restarts itself before
 // giving up and behaving as if the dictation had simply ended.
 #define DICTATION_MAX_AUTO_RESUMES 3
+// When "Quiet Time while dictating" is on, dictation waits for the phone
+// to engage Quiet Time (QUIET_READY) before it starts - but never longer
+// than this. A missing or slow reply must never block dictation.
+#define QUIET_READY_TIMEOUT_MS 3000
 
 struct SessionWindow {
   Window* window;
@@ -101,6 +106,11 @@ struct SessionWindow {
   int pending_scroll_target;
   bool scroll_target_pending;
   bool dictation_active;
+  // Quiet Time while dictating: engaged once QUIET_START has been sent for
+  // this window, pending while QUIET_READY is still outstanding.
+  bool quiet_engaged;
+  bool quiet_pending;
+  AppTimer *quiet_timer;
   bool touch_subscribed;
   bool touch_dragging;
   bool touch_moved;
@@ -148,11 +158,23 @@ static void prv_action_menu_query(ActionMenu *action_menu, const ActionMenuItem 
 static void prv_action_menu_input(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_action_menu_report_thread(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_start_dictation(SessionWindow *sw);
+static void prv_start_dictation_now(SessionWindow *sw);
 static void prv_begin_dictation(SessionWindow *sw);
+static void prv_quiet_send(bool start);
+static void prv_quiet_release(SessionWindow *sw);
+static void prv_quiet_ready_timeout(void *context);
+static void prv_quiet_inbox_received(DictionaryIterator *iter, void *context);
 static SessionWindow* prv_active_session_window(void);
 static bool prv_submit_clarification_answer(SessionWindow *sw, const char *answer_text, const char *display_override);
 
+// QUIET_READY replies are routed to whichever session window is active;
+// one app-lifetime subscription is enough (same pattern as settings.c).
+static EventHandle s_quiet_inbox_handle;
+
 void session_window_push(int timeout, char *starting_prompt) {
+  if (!s_quiet_inbox_handle) {
+    s_quiet_inbox_handle = events_app_message_register_inbox_received(prv_quiet_inbox_received, NULL);
+  }
   Window *window = bwindow_create();
   SessionWindow *sw = bmalloc(sizeof(SessionWindow));
   memset(sw, 0, sizeof(SessionWindow));
@@ -174,6 +196,9 @@ void session_window_push(int timeout, char *starting_prompt) {
 
 static void prv_destroy(SessionWindow *sw) {
   BOBBY_LOG(APP_LOG_LEVEL_INFO, "destroying SessionWindow %p.", sw);
+  // Cancels the QUIET_READY timer (it must never fire on a freed window)
+  // and restores Quiet Time if it was still engaged.
+  prv_quiet_release(sw);
   prv_cancel_timeout(sw);
   prv_cancel_arrival_animation(sw);
   prv_cancel_thinking_move(sw);
@@ -313,6 +338,12 @@ static void prv_window_appear(Window *window) {
 
 static void prv_window_disappear(Window *window) {
   SessionWindow *sw = (SessionWindow *)window_get_user_data(window);
+  // Leaving the window for good ends any Quiet Time hold. While dictation
+  // is on screen the disappear is just the dictation UI covering this
+  // window, so the hold stays.
+  if (!sw->dictation_active) {
+    prv_quiet_release(sw);
+  }
   if (sw->touch_subscribed) {
     touch_service_unsubscribe();
     sw->touch_subscribed = false;
@@ -395,6 +426,13 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
     sw->dictating_clarification = false;
     prv_dictation_error(sw, status);
     break;
+  }
+  // Every end of dictation releases the Quiet Time hold - except a system
+  // abort, where the hold stays on so the auto-resume (prv_window_appear)
+  // dictates under the same protection instead of toggling Quiet Time off
+  // and back on around the interruption.
+  if (status != DictationSessionStatusFailureSystemAborted) {
+    prv_quiet_release(sw);
   }
 }
 
@@ -998,6 +1036,11 @@ static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
     sw->dictation_active = false;
     dictation_session_stop(sw->dictation);
   }
+  if (sw) {
+    // dictation_session_stop() delivers no status callback, so the user
+    // cancel path releases the Quiet Time hold itself.
+    prv_quiet_release(sw);
+  }
   // Elastic pop: the mirror image of the elastic push, so the
   // conversation leaves the same way it arrived.
   mica_animate_window_pop(sw->window);
@@ -1257,6 +1300,65 @@ static void prv_timed_out(void *ctx) {
   mica_animate_window_pop(sw->window);
 }
 
+// --- Quiet Time while dictating -------------------------------------------
+// The watch cannot change Quiet Time itself; the phone does it through the
+// Pebble app's Watch Settings plugin (see pkjs/lib/quiet.js). The watch
+// side is a small handshake: QUIET_START asks the phone to engage Quiet
+// Time, QUIET_READY (or a timeout - dictation must never be blocked) lets
+// dictation start, and QUIET_STOP asks for the previous settings back.
+
+static void prv_quiet_send(bool start) {
+  DictionaryIterator *iter;
+  AppMessageResult result = app_message_outbox_begin(&iter);
+  if (result != APP_MSG_OK) {
+    BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Quiet Time %s request failed to open: %d",
+        start ? "start" : "stop", result);
+    return;
+  }
+  dict_write_uint8(iter, start ? MESSAGE_KEY_QUIET_START : MESSAGE_KEY_QUIET_STOP, 1);
+  app_message_outbox_send();
+}
+
+static void prv_quiet_release(SessionWindow *sw) {
+  if (sw->quiet_timer) {
+    app_timer_cancel(sw->quiet_timer);
+    sw->quiet_timer = NULL;
+  }
+  sw->quiet_pending = false;
+  if (sw->quiet_engaged) {
+    sw->quiet_engaged = false;
+    prv_quiet_send(false);
+  }
+}
+
+static void prv_quiet_ready_timeout(void *context) {
+  SessionWindow *sw = context;
+  sw->quiet_timer = NULL;
+  if (!sw->quiet_pending) {
+    return;
+  }
+  sw->quiet_pending = false;
+  BOBBY_LOG(APP_LOG_LEVEL_INFO, "No QUIET_READY in time; starting dictation anyway.");
+  prv_start_dictation_now(sw);
+}
+
+static void prv_quiet_inbox_received(DictionaryIterator *iter, void *context) {
+  Tuple *tuple = dict_find(iter, MESSAGE_KEY_QUIET_READY);
+  if (!tuple) {
+    return;
+  }
+  SessionWindow *sw = prv_active_session_window();
+  if (!sw || !sw->quiet_pending) {
+    return;
+  }
+  sw->quiet_pending = false;
+  if (sw->quiet_timer) {
+    app_timer_cancel(sw->quiet_timer);
+    sw->quiet_timer = NULL;
+  }
+  prv_start_dictation_now(sw);
+}
+
 static void prv_begin_dictation(SessionWindow *sw) {
   // A dictation the user explicitly asked for starts a fresh turn: forget
   // any interruption state left over from a previous turn.
@@ -1266,6 +1368,19 @@ static void prv_begin_dictation(SessionWindow *sw) {
 }
 
 static void prv_start_dictation(SessionWindow *sw) {
+  if (!settings_get_quiet_listen() || sw->quiet_engaged) {
+    // Setting off, or Quiet Time already held for this window (the
+    // auto-resume after a system abort): start right away.
+    prv_start_dictation_now(sw);
+    return;
+  }
+  sw->quiet_engaged = true;
+  sw->quiet_pending = true;
+  prv_quiet_send(true);
+  sw->quiet_timer = app_timer_register(QUIET_READY_TIMEOUT_MS, prv_quiet_ready_timeout, sw);
+}
+
+static void prv_start_dictation_now(SessionWindow *sw) {
   // Dictation needs a ridiculous amount of memory to behave properly.
   free(bmalloc(2048));
 #if !ENABLE_FEATURE_FIXED_PROMPT

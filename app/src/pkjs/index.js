@@ -24,6 +24,7 @@ var customConfigFunction = require('./custom_config');
 var config = require('./config');
 var reminders = require('./reminders');
 var feedback = require('./lib/feedback');
+var quiet = require('./lib/quiet');
 var package_json = require('package.json');
 var runtimeRouter = require('./agent/runtime_router');
 var diagnostics = require('./agent/diagnostics');
@@ -67,6 +68,10 @@ Pebble.addEventListener('webviewclosed', function(e) {
 });
 
 function main() {
+    // Put back any Quiet Time change a previous run left behind (the watch
+    // app was closed mid-dictation, the phone restarted, ...). No-op when
+    // there is nothing to restore.
+    quiet.stop();
     location.update();
     Pebble.addEventListener('appmessage', handleAppMessage);
 }
@@ -107,6 +112,24 @@ function handleAppMessageInner(e) {
     var data = e.payload;
     if (data.ANDROID_COMPANION_READY) {
         runtimeRouter.recordAndroidCompanionSeen(data.ANDROID_REQUEST_ID);
+        return;
+    }
+    if ('QUIET_START' in data) {
+        // The watch wants to dictate: engage Quiet Time (with notifications
+        // hidden) first, then let it start. When the setting is off, or the
+        // plugin API is unavailable, quiet.start() resolves immediately, so
+        // the watch is never kept waiting; it also has its own timeout.
+        if (config.getSetting('QUIET_LISTEN', true)) {
+            quiet.start(function() {
+                Pebble.sendAppMessage({QUIET_READY: 1});
+            });
+        } else {
+            Pebble.sendAppMessage({QUIET_READY: 1});
+        }
+        return;
+    }
+    if ('QUIET_STOP' in data) {
+        quiet.stop();
         return;
     }
     if (data.AI_TEST_REQUEST) {
