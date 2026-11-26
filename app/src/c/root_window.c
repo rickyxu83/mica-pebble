@@ -282,7 +282,7 @@ static void prv_window_appear(Window* window) {
   // it can blink and make expressions; its resting expression is
   // DOT + OMEGA (style 2). The idle expression state machine below
   // drives the rest.
-  rw->mascot_layer = face_layer_create(GRect((content_width - 64) / 2, rw->mascot_base_y, 64, 64));
+  rw->mascot_layer = face_layer_create(GRect((content_width - 84) / 2, rw->mascot_base_y, 84, 84));
   face_layer_set_expression(rw->mascot_layer, FaceEyeDot, FaceEyeDot,
       FaceMouthOmega, 0, 0, 0, FacePropNone);
   layer_add_child(window_get_root_layer(rw->window), face_layer_get_layer(rw->mascot_layer));
@@ -291,7 +291,7 @@ static void prv_window_appear(Window* window) {
   mica_transition_register_lead_layer(face_layer_get_layer(rw->mascot_layer));
 
   int16_t greeting_inset = PBL_IF_ROUND_ELSE(24, 8);
-  rw->greeting_layer = btext_layer_create(GRect(greeting_inset, rw->mascot_base_y + 72,
+  rw->greeting_layer = btext_layer_create(GRect(greeting_inset, rw->mascot_base_y + 92,
       content_width - greeting_inset * 2, PBL_IF_ROUND_ELSE(62, 52)));
   text_layer_set_font(rw->greeting_layer, fonts_get_config()->title_font);
   text_layer_set_text_alignment(rw->greeting_layer, GTextAlignmentCenter);

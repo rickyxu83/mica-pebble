@@ -771,11 +771,11 @@ static void prv_touch_event_handler(const TouchEvent *event, void *context) {
 static void prv_set_scroll_height(SessionWindow* sw) {
   GSize old_size = scroll_layer_get_content_size(sw->scroll_layer);
   GSize new_size = GSize(prv_holder_width(sw), sw->content_height + PADDING);
-  if (old_size.h >= new_size.h) {
+  if (old_size.h == new_size.h && old_size.w == new_size.w) {
     return;
   }
-  // Decide whether the user is following the tail *before* the content
-  // grows: if they have scrolled up to read, new content must not yank
+  // Decide whether the user is following the tail *before* the size
+  // changes: if they have scrolled up to read, new content must not yank
   // the view away from what they are looking at.
   GRect scroll_frame = layer_get_frame(scroll_layer_get_layer(sw->scroll_layer));
   GPoint offset = scroll_layer_get_content_offset(sw->scroll_layer);
@@ -784,6 +784,16 @@ static void prv_set_scroll_height(SessionWindow* sw) {
   scroll_layer_set_content_size(sw->scroll_layer, new_size);
   if (at_bottom && offset.y > -sw->last_prompt_end_offset) {
     prv_request_follow_scroll(sw, -sw->last_prompt_end_offset);
+  } else if (new_size.h < old_size.h) {
+    // The size shrank: the streaming height estimator overshoots (for
+    // CJK text its word-break backtracking finds no breaks), and the
+    // exact measurement taken when the response completes is smaller.
+    // The old grow-only guard kept the overshoot as a scrollable blank
+    // tail forever. Pull an out-of-range offset back into range.
+    const int16_t clamped = prv_clamp_scroll_offset_y(sw, offset.y);
+    if (clamped != offset.y) {
+      scroll_layer_set_content_offset(sw->scroll_layer, GPoint(0, clamped), false);
+    }
   }
 }
 
