@@ -10,10 +10,10 @@
 // width by 0.22 of the height (style 2: shorter, fatter eyes with the
 // tiny omega mouth below). Everything derives from the bounds, so one
 // implementation reads from the 64 px mascot down to the thinking face.
-#define FACE_EYE_LEFT_X_NUM 29
-#define FACE_EYE_RIGHT_X_NUM 71
-#define FACE_EYE_Y_NUM 44
-#define FACE_MOUTH_Y_NUM 63
+#define FACE_EYE_LEFT_X_NUM 24
+#define FACE_EYE_RIGHT_X_NUM 76
+#define FACE_EYE_Y_NUM 42
+#define FACE_MOUTH_Y_NUM 64
 #define FACE_PERCENT 100
 
 typedef struct {
@@ -59,7 +59,7 @@ void face_layer_set_expression(FaceLayer *layer, FaceEyeKind eyes,
 }
 
 static int16_t prv_stroke_width(const GRect *bounds) {
-  int16_t width = bounds->size.w * 6 / FACE_PERCENT;
+  int16_t width = bounds->size.w * 8 / FACE_PERCENT;
   return width < 2 ? 2 : width;
 }
 
@@ -82,15 +82,15 @@ static void prv_draw_eye(GContext *ctx, const GRect *bounds, FaceEyeKind kind,
   const int16_t h = bounds->size.h;
   switch (kind) {
     case FaceEyeDot: {
-      int16_t eye_w = w * 12 / FACE_PERCENT;
-      int16_t eye_h = h * 22 / FACE_PERCENT;
+      int16_t eye_w = w * 19 / FACE_PERCENT;
+      int16_t eye_h = h * 32 / FACE_PERCENT;
       prv_fill_capsule(ctx, center_x, center_y,
           eye_w < 3 ? 3 : eye_w, eye_h < 3 ? 3 : eye_h);
       break;
     }
     case FaceEyeBlink: {
-      int16_t eye_w = w * 16 / FACE_PERCENT;
-      int16_t eye_h = h * 5 / FACE_PERCENT;
+      int16_t eye_w = w * 22 / FACE_PERCENT;
+      int16_t eye_h = h * 7 / FACE_PERCENT;
       prv_fill_capsule(ctx, center_x, center_y,
           eye_w < 4 ? 4 : eye_w, eye_h < 2 ? 2 : eye_h);
       break;
@@ -99,7 +99,7 @@ static void prv_draw_eye(GContext *ctx, const GRect *bounds, FaceEyeKind kind,
       // An upward arc (^^): the top half of a circle, drawn from the
       // left point (270 deg) over the top to the right point (90 deg);
       // graphics_draw_arc normalises the wrapped end angle.
-      int16_t diameter = w * 18 / FACE_PERCENT;
+      int16_t diameter = w * 26 / FACE_PERCENT;
       if (diameter < 6) {
         diameter = 6;
       }
@@ -111,7 +111,7 @@ static void prv_draw_eye(GContext *ctx, const GRect *bounds, FaceEyeKind kind,
       break;
     }
     case FaceEyeSmall: {
-      int16_t radius = w * 5 / FACE_PERCENT;
+      int16_t radius = w * 7 / FACE_PERCENT;
       graphics_fill_circle(ctx, GPoint(center_x, center_y),
           radius < 2 ? 2 : radius);
       break;
@@ -131,7 +131,7 @@ static void prv_draw_mouth(GContext *ctx, const GRect *bounds,
       // The bottom arc of a circle whose centre sits above the mouth
       // line, so the arc's midpoint lands on the mouth centre.
       const bool big = data->mouth == FaceMouthBigSmile;
-      int16_t radius = w * (big ? 20 : 15) / FACE_PERCENT;
+      int16_t radius = w * (big ? 27 : 21) / FACE_PERCENT;
       if (radius < 3) {
         radius = 3;
       }
@@ -144,8 +144,8 @@ static void prv_draw_mouth(GContext *ctx, const GRect *bounds,
       break;
     }
     case FaceMouthFlat: {
-      int16_t mouth_w = w * 18 / FACE_PERCENT;
-      int16_t mouth_h = h * 5 / FACE_PERCENT;
+      int16_t mouth_w = w * 24 / FACE_PERCENT;
+      int16_t mouth_h = h * 7 / FACE_PERCENT;
       prv_fill_capsule(ctx, center_x, mouth_y,
           mouth_w < 4 ? 4 : mouth_w, mouth_h < 2 ? 2 : mouth_h);
       break;
@@ -155,11 +155,11 @@ static void prv_draw_mouth(GContext *ctx, const GRect *bounds,
       // at the centre so the pair reads as a tiny "ω". A bottom arc
       // sweeps 90 -> 270 in this codebase's angle convention (the smile
       // arc's 120 -> 240 passes through 180, the bottom point).
-      int16_t radius = w * 55 / 1000;
+      int16_t radius = w * 85 / 1000;
       if (radius < 3) {
         radius = 3;
       }
-      int16_t stroke = h * 45 / 1000;
+      int16_t stroke = h * 65 / 1000;
       graphics_context_set_stroke_width(ctx, stroke < 2 ? 2 : stroke);
       for (int side = -1; side <= 1; side += 2) {
         int16_t cx = center_x + side * radius;
@@ -173,8 +173,8 @@ static void prv_draw_mouth(GContext *ctx, const GRect *bounds,
     case FaceMouthWave: {
       // A sine polyline spanning two full cycles, its amplitude tapered
       // to zero at both ends so it reads as a voice waveform.
-      const int16_t half_w = w * 17 / FACE_PERCENT;
-      const int16_t amplitude = h * 6 / FACE_PERCENT;
+      const int16_t half_w = w * 24 / FACE_PERCENT;
+      const int16_t amplitude = h * 8 / FACE_PERCENT;
       const int segments = 12;
       GPoint prev = GPoint(center_x - half_w, mouth_y);
       for (int i = 1; i <= segments; ++i) {
