@@ -4,10 +4,15 @@
 支持多 Provider 的 Pebble AI 助手。
 使用自己的 API Key，无 Mica 服务器，无订阅费。
 
+## 作者
+rickyxu83
+Mica 的作者与维护者。
+
 ## 项目
 基于 Thomas Bolger 的 Billy，以及 Rebble 和 Pebble 社区的 Bobby / Tiny Assistant。Mica 增加了多 Provider、自定义 OpenAI 兼容端点和原创中文界面。
 
 ## 开发
+rickyxu83
 Thomas Bolger
 Katharine Berry
 Mica contributors
