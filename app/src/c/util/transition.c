@@ -200,7 +200,10 @@ void mica_animate_window_push_colored(Window *window, GColor background) {
       &target);
   Animation *animation = property_animation_get_animation(transition->root_pa);
   animation_set_duration(animation, MICA_ENTER_MS);
-  animation_set_curve(animation, AnimationCurveCustomFunction);
+  // NB: never call animation_set_curve(AnimationCurveCustomFunction) —
+  // the firmware asserts curve < AnimationCurveCustomFunction there and
+  // panics. animation_set_custom_curve() selects the custom-curve type
+  // itself.
   animation_set_custom_curve(animation, mica_curve_settle);
   animation_set_handlers(animation, (AnimationHandlers) {
     .stopped = prv_transition_stopped,
@@ -222,7 +225,6 @@ void mica_animate_window_push_colored(Window *window, GColor background) {
     Animation *lead_animation =
         property_animation_get_animation(transition->lead_pa);
     animation_set_duration(lead_animation, MICA_ENTER_MS);
-    animation_set_curve(lead_animation, AnimationCurveCustomFunction);
     animation_set_custom_curve(lead_animation, mica_curve_settle_strong);
     animation_set_handlers(lead_animation, (AnimationHandlers) {
       .stopped = prv_transition_stopped,

@@ -25,8 +25,10 @@ void mica_animate_window_pop(Window *window);
 void mica_transition_register_lead_layer(Layer *layer);
 
 // The settle curves themselves, as AnimationCurveFunction callbacks for
-// animation_set_curve(AnimationCurveCustomFunction) +
-// animation_set_custom_curve(): standard settle (~4% overshoot) and
+// animation_set_custom_curve() (which selects the custom-curve type
+// itself; animation_set_curve must never be given a custom curve value —
+// the firmware asserts against it and panics): standard settle
+// (~4% overshoot) and
 // strong settle (~9% overshoot, used for the leading logo). progress is
 // ANIMATION_NORMALIZED_MIN..MAX; the eased result may exceed
 // ANIMATION_NORMALIZED_MAX mid-flight (that is the overshoot).
