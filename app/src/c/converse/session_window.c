@@ -76,6 +76,11 @@
 // to engage Quiet Time (QUIET_READY) before it starts - but never longer
 // than this. A missing or slow reply must never block dictation.
 #define QUIET_READY_TIMEOUT_MS 3000
+// QUIET_STOP delivery retries: the AppMessage outbox is busy while the AI
+// request sent just before it is still in flight, so the stop is retried
+// until it goes out (the phone-side safety restore is the last resort).
+#define QUIET_STOP_RETRY_MS 250
+#define QUIET_STOP_MAX_ATTEMPTS 40
 
 struct SessionWindow {
   Window* window;
@@ -111,10 +116,16 @@ struct SessionWindow {
   // call returns and dictation_active is set.
   bool dictation_starting;
   // Quiet Time while dictating: engaged once QUIET_START has been sent for
-  // this window, pending while QUIET_READY is still outstanding.
+  // this window, pending while QUIET_READY is still outstanding. The hold
+  // stays "engaged" until QUIET_STOP has really been handed to the
+  // AppMessage outbox; while the stop still owes delivery, a retry timer
+  // is armed (quiet_stop_timer).
   bool quiet_engaged;
   bool quiet_pending;
+  bool quiet_destroying;
   AppTimer *quiet_timer;
+  AppTimer *quiet_stop_timer;
+  uint8_t quiet_stop_attempts;
   bool touch_subscribed;
   bool touch_dragging;
   bool touch_moved;
@@ -164,7 +175,7 @@ static void prv_action_menu_report_thread(ActionMenu *action_menu, const ActionM
 static void prv_start_dictation(SessionWindow *sw);
 static void prv_start_dictation_now(SessionWindow *sw);
 static void prv_begin_dictation(SessionWindow *sw);
-static void prv_quiet_send(bool start);
+static bool prv_quiet_send(bool start);
 static void prv_quiet_release(SessionWindow *sw);
 static void prv_quiet_ready_timeout(void *context);
 static void prv_quiet_inbox_received(DictionaryIterator *iter, void *context);
@@ -200,8 +211,14 @@ void session_window_push(int timeout, char *starting_prompt) {
 
 static void prv_destroy(SessionWindow *sw) {
   BOBBY_LOG(APP_LOG_LEVEL_INFO, "destroying SessionWindow %p.", sw);
-  // Cancels the QUIET_READY timer (it must never fire on a freed window)
-  // and restores Quiet Time if it was still engaged.
+  // Cancels the QUIET timers (they must never fire on a freed window) and
+  // restores Quiet Time if it was still engaged. With quiet_destroying
+  // set, the release makes one last send attempt but arms no retry.
+  sw->quiet_destroying = true;
+  if (sw->quiet_stop_timer) {
+    app_timer_cancel(sw->quiet_stop_timer);
+    sw->quiet_stop_timer = NULL;
+  }
   prv_quiet_release(sw);
   prv_cancel_timeout(sw);
   prv_cancel_arrival_animation(sw);
@@ -1312,16 +1329,53 @@ static void prv_timed_out(void *ctx) {
 // Time, QUIET_READY (or a timeout - dictation must never be blocked) lets
 // dictation start, and QUIET_STOP asks for the previous settings back.
 
-static void prv_quiet_send(bool start) {
+static bool prv_quiet_send(bool start) {
   DictionaryIterator *iter;
   AppMessageResult result = app_message_outbox_begin(&iter);
   if (result != APP_MSG_OK) {
     BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Quiet Time %s request failed to open: %d",
         start ? "start" : "stop", result);
-    return;
+    return false;
   }
   dict_write_uint8(iter, start ? MESSAGE_KEY_QUIET_START : MESSAGE_KEY_QUIET_STOP, 1);
-  app_message_outbox_send();
+  result = app_message_outbox_send();
+  if (result != APP_MSG_OK) {
+    BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Quiet Time %s request failed to send: %d",
+        start ? "start" : "stop", result);
+    return false;
+  }
+  return true;
+}
+
+static void prv_quiet_cancel_stop_retry(SessionWindow *sw) {
+  if (sw->quiet_stop_timer) {
+    app_timer_cancel(sw->quiet_stop_timer);
+    sw->quiet_stop_timer = NULL;
+  }
+  sw->quiet_stop_attempts = 0;
+}
+
+static void prv_quiet_stop_retry(void *context) {
+  SessionWindow *sw = context;
+  sw->quiet_stop_timer = NULL;
+  if (!sw->quiet_engaged || sw->quiet_destroying) {
+    return;
+  }
+  if (prv_quiet_send(false)) {
+    sw->quiet_engaged = false;
+    sw->quiet_stop_attempts = 0;
+    BOBBY_LOG(APP_LOG_LEVEL_INFO, "QUIET_STOP delivered on retry.");
+    return;
+  }
+  if (++sw->quiet_stop_attempts < QUIET_STOP_MAX_ATTEMPTS) {
+    sw->quiet_stop_timer = app_timer_register(QUIET_STOP_RETRY_MS, prv_quiet_stop_retry, sw);
+  } else {
+    // Leave quiet_engaged set: disappear/destroy make a final attempt,
+    // and the phone restores on its own after its safety timeout.
+    BOBBY_LOG(APP_LOG_LEVEL_WARNING,
+        "QUIET_STOP still undelivered after %d attempts; leaving the hold "
+        "for the phone-side safety restore.", QUIET_STOP_MAX_ATTEMPTS);
+  }
 }
 
 static void prv_quiet_release(SessionWindow *sw) {
@@ -1330,9 +1384,24 @@ static void prv_quiet_release(SessionWindow *sw) {
     sw->quiet_timer = NULL;
   }
   sw->quiet_pending = false;
-  if (sw->quiet_engaged) {
+  if (!sw->quiet_engaged) {
+    return;
+  }
+  // The dictation callback sends the AI request on this same outbox
+  // moments before the release runs, and outbox_begin fails BUSY while
+  // that message is still in flight - a fire-and-forget QUIET_STOP here
+  // was silently dropped (and the hold already marked released), so
+  // Quiet Time stayed on until the phone-side safety timeout. Now the
+  // hold stays marked engaged until the stop is really on its way, with
+  // a retry timer covering the busy window.
+  if (prv_quiet_send(false)) {
     sw->quiet_engaged = false;
-    prv_quiet_send(false);
+    prv_quiet_cancel_stop_retry(sw);
+    return;
+  }
+  if (!sw->quiet_destroying && !sw->quiet_stop_timer) {
+    sw->quiet_stop_attempts = 0;
+    sw->quiet_stop_timer = app_timer_register(QUIET_STOP_RETRY_MS, prv_quiet_stop_retry, sw);
   }
 }
 
@@ -1373,9 +1442,17 @@ static void prv_begin_dictation(SessionWindow *sw) {
 }
 
 static void prv_start_dictation(SessionWindow *sw) {
-  if (!settings_get_quiet_listen() || sw->quiet_engaged) {
-    // Setting off, or Quiet Time already held for this window (the
-    // auto-resume after a system abort): start right away.
+  if (sw->quiet_engaged) {
+    // Quiet Time already held for this window (the auto-resume after a
+    // system abort, or a QUIET_STOP that is still being retried): the
+    // phone still holds it, so the new dictation reuses the hold - just
+    // cancel any pending stop retry and start right away.
+    prv_quiet_cancel_stop_retry(sw);
+    prv_start_dictation_now(sw);
+    return;
+  }
+  if (!settings_get_quiet_listen()) {
+    // Setting off: start right away.
     prv_start_dictation_now(sw);
     return;
   }
