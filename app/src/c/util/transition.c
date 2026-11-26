@@ -105,6 +105,24 @@ void mica_transition_register_lead_layer(Layer *layer) {
   s_pending_lead = layer;
 }
 
+// Deferred teardown: an animation must never be destroyed from inside
+// its own stopped callback — the scheduler is still walking its list
+// with that animation, so freeing it there is a use-after-free (this
+// crashed every converted transition at completion, including the very
+// first entrance at app launch). The stopped handler below only snaps
+// frames and stops the sibling; the PropertyAnimations and the context
+// are destroyed here, one timer tick later.
+static void prv_transition_cleanup(void *context) {
+  MicaTransition *transition = context;
+  if (transition->root_pa) {
+    property_animation_destroy(transition->root_pa);
+  }
+  if (transition->lead_pa) {
+    property_animation_destroy(transition->lead_pa);
+  }
+  free(transition);
+}
+
 static void prv_transition_stopped(Animation *animation, bool finished,
     void *context) {
   MicaTransition *transition = context;
@@ -137,16 +155,10 @@ static void prv_transition_stopped(Animation *animation, bool finished,
   }
   const bool exiting = transition->exiting;
   Window *window = transition->window;
-  if (transition->root_pa) {
-    property_animation_destroy(transition->root_pa);
-  }
-  if (transition->lead_pa) {
-    property_animation_destroy(transition->lead_pa);
-  }
   if (s_active == transition) {
     s_active = NULL;
   }
-  free(transition);
+  app_timer_register(1, prv_transition_cleanup, transition);
   if (exiting && window && window_stack_get_top_window() == window) {
     window_stack_pop(false);
   }
@@ -156,7 +168,7 @@ static void prv_transition_stopped(Animation *animation, bool finished,
 // stopped handler synchronously, which snaps frames (and pops, for an
 // exit) and frees the context.
 static void prv_finish_active(void) {
-  if (s_active) {
+  if (s_active && s_active->root_pa) {
     animation_unschedule(property_animation_get_animation(s_active->root_pa));
   }
 }
