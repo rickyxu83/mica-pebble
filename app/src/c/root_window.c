@@ -21,7 +21,6 @@
 #include "root_window.h"
 #include "converse/session_window.h"
 #include "menus/root_menu.h"
-#include "settings/settings.h"
 #include "menus/prompt_menu.h"
 #include "util/face_layer.h"
 #include "util/logging.h"
@@ -53,7 +52,6 @@ struct RootWindow {
   int16_t mascot_base_y;
   uint32_t mascot_phase_ms;
   AppTimer* expression_timer;
-  AppTimer* idle_exit_timer;
   uint8_t expression_phase;
   uint16_t expression_intro_progress;
   uint8_t expression_slot;
@@ -224,30 +222,6 @@ static void prv_window_load(Window *window) {
   // RootWindow* root_window = (RootWindow*)window_get_user_data(window);
 }
 
-// Idle auto-exit: while the home page is on top, a one-shot timer
-// (length from the IDLE_EXIT_TIMEOUT setting; 0 = follow the system
-// and no timer is armed) exits to the watchface. Every interaction
-// on this page pushes another window, which cancels the timer via
-// prv_window_disappear, and returning home re-arms it in appear —
-// so no per-click resets are needed.
-static void prv_idle_exit_fired(void *context) {
-  RootWindow *rw = context;
-  rw->idle_exit_timer = NULL;
-  window_stack_pop_all(false);
-}
-
-static void prv_idle_exit_arm(RootWindow *rw) {
-  if (rw->idle_exit_timer) {
-    app_timer_cancel(rw->idle_exit_timer);
-    rw->idle_exit_timer = NULL;
-  }
-  int seconds = settings_get_idle_exit_timeout();
-  if (seconds > 0) {
-    rw->idle_exit_timer = app_timer_register(seconds * 1000,
-        prv_idle_exit_fired, rw);
-  }
-}
-
 static void prv_window_appear(Window* window) {
   size_t heap_size = heap_bytes_free();
   RootWindow* rw = window_get_user_data(window);
@@ -358,7 +332,6 @@ static void prv_window_appear(Window* window) {
   // first tick after EXPRESSION_INTRO_DELAY_MS starts the morph.
   rw->expression_timer = app_timer_register(EXPRESSION_INTRO_DELAY_MS,
       prv_expression_timer, rw);
-  prv_idle_exit_arm(rw);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window appeared. Heap usage increased %d bytes", heap_size - heap_bytes_free());
 }
 
@@ -547,10 +520,6 @@ static void prv_window_disappear(Window* window) {
   if (rw->expression_timer) {
     app_timer_cancel(rw->expression_timer);
     rw->expression_timer = NULL;
-  }
-  if (rw->idle_exit_timer) {
-    app_timer_cancel(rw->idle_exit_timer);
-    rw->idle_exit_timer = NULL;
   }
   if (rw->event_handle) {
     events_tick_timer_service_unsubscribe(rw->event_handle);
