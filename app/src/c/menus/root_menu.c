@@ -200,7 +200,7 @@ static void prv_window_unload(Window* window) {
   menu_layer_destroy(data->menu_layer);
   text_layer_destroy(data->header_layer);
   layer_destroy(data->header_separator);
-  for (uint32_t i = 0; i < 8; i++) {
+  for (uint32_t i = 0; i < ARRAY_LENGTH(s_items); i++) {
     if (s_items[i].icon) {
       gbitmap_destroy(s_items[i].icon);
       s_items[i].icon = NULL;
