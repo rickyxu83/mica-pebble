@@ -57,6 +57,7 @@ struct RootWindow {
   uint8_t expression_slot;
   uint16_t expression_slot_elapsed_ms;
   bool expression_slot_released;
+  bool expression_intro_delay_done;
   EventHandle event_handle;
   EventHandle app_message_handle;
   bool touch_subscribed;
@@ -115,9 +116,10 @@ Window* root_window_get_window(RootWindow* window) {
 #define ROOT_TOUCH_TAP_MAX_DISTANCE_PX 10
 
 #define EXPRESSION_INTRO_TICK_MS 30
-#define EXPRESSION_INTRO_DURATION_MS 700
+#define EXPRESSION_INTRO_DELAY_MS 450
+#define EXPRESSION_INTRO_DURATION_MS 900
 #define EXPRESSION_TICK_MS 100
-#define EXPRESSION_SLOT_MS 2000
+#define EXPRESSION_SLOT_MS 1000
 #define EXPRESSION_BLINK_CLOSE_MS 150
 #define EXPRESSION_WINK_CLOSE_MS 800
 
@@ -278,10 +280,10 @@ static void prv_window_appear(Window* window) {
   text_layer_set_background_color(rw->greeting_layer, GColorClear);
   layer_add_child(window_get_root_layer(rw->window), text_layer_get_layer(rw->greeting_layer));
   rw->greeting_overridden = false;
-  if (version_is_updated() || rand() < RAND_MAX / 10) {
-    rw->greeting_overridden = true;
-    text_layer_set_text(rw->greeting_layer, S(STR_HOLD_SELECT));
-  }
+  // The greeting area always shows the time-of-day greeting. (It used
+  // to swap in a "hold select to ask" hint after updates / at random;
+  // the owner found the hint unnecessary and its second line clipped,
+  // so the override is gone.)
 
   VersionInfo version_info = version_get_current();
   snprintf(rw->version_string, sizeof(rw->version_string), "v%d.%d", version_info.major, version_info.minor);
@@ -309,7 +311,7 @@ static void prv_window_appear(Window* window) {
   }
   // Idle performance: on every appear the mascot starts as the
   // launcher icon's three bars and morphs into the face (driven by
-  // prv_expression_timer below), then steps the 2 s expression
+  // prv_expression_timer below), then steps the 1 s expression
   // rotation. Breathing starts when the morph completes, so the two
   // never fight over the mascot's frame; prv_window_disappear cancels
   // both timers, so any navigation stops everything instantly.
@@ -319,8 +321,13 @@ static void prv_window_appear(Window* window) {
   rw->expression_slot = 0;
   rw->expression_slot_elapsed_ms = 0;
   rw->expression_slot_released = false;
+  rw->expression_intro_delay_done = false;
   face_layer_set_intro_progress(rw->mascot_layer, 0);
-  rw->expression_timer = app_timer_register(EXPRESSION_INTRO_TICK_MS,
+  // Hold the bars for a beat first: the launch zoom and the entrance
+  // transition are still playing when appear fires, and a morph that
+  // starts instantly is over before the page is even readable. The
+  // first tick after EXPRESSION_INTRO_DELAY_MS starts the morph.
+  rw->expression_timer = app_timer_register(EXPRESSION_INTRO_DELAY_MS,
       prv_expression_timer, rw);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window appeared. Heap usage increased %d bytes", heap_size - heap_bytes_free());
 }
@@ -399,13 +406,19 @@ static void prv_expression_apply_slot(RootWindow *rw, uint16_t elapsed_ms) {
 }
 
 // One chained timer drives the whole idle performance: 30 ms ticks
-// run the bars -> face intro morph, then 100 ms ticks step the 2 s
+// run the bars -> face intro morph, then 100 ms ticks step the 1 s
 // slot rotation. Exactly one expression timer is ever outstanding;
 // prv_window_disappear cancels it before the face is destroyed.
 static void prv_expression_timer(void *context) {
   RootWindow *rw = context;
   rw->expression_timer = NULL;
   if (rw->expression_phase == EXPR_PHASE_INTRO) {
+    if (!rw->expression_intro_delay_done) {
+      rw->expression_intro_delay_done = true;
+      rw->expression_timer = app_timer_register(EXPRESSION_INTRO_TICK_MS,
+          prv_expression_timer, rw);
+      return;
+    }
     rw->expression_intro_progress +=
         1000 * EXPRESSION_INTRO_TICK_MS / EXPRESSION_INTRO_DURATION_MS;
     if (rw->expression_intro_progress >= 1000) {
