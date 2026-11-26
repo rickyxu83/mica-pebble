@@ -27,14 +27,18 @@
 #include "../util/transition.h"
 #include "../util/i18n.h"
 #include "../util/fonts.h"
+#include "../util/time.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
 #include "../util/logging.h"
 #include <pebble.h>
+#include <pebble-events/pebble-events.h>
 
 static void prv_window_load(Window* window);
 static void prv_window_appear(Window* window);
 static void prv_window_unload(Window* window);
+static void prv_header_tick_handler(struct tm* tick_time, TimeUnits units_changed, void* context);
+static void prv_header_create(Window* window);
 static void prv_push_quota_screen(int index, void* context);
 static void prv_push_alarm_screen(int index, void* context);
 static void prv_push_timer_screen(int index, void* context);
@@ -52,10 +56,22 @@ typedef struct {
 
 static MicaMenuItem s_items[8];
 
+// Custom page header replacing the firmware status bar (whose time
+// text is tiny and not resizable): a 36 px time line in
+// GOTHIC_28_BOLD over a 1 px separator; content starts below both.
+#define MENU_HEADER_HEIGHT 36
+#define MENU_CONTENT_TOP (MENU_HEADER_HEIGHT + 1)
+
 typedef struct {
   MenuLayer *menu_layer;
-  StatusBarLayer *status_bar;
+  TextLayer *header_layer;
+  Layer *header_separator;
+  EventHandle tick_handle;
+  char header_time[8];
 } RootMenuWindowData;
+
+static void prv_header_update_time(RootMenuWindowData *data);
+static void prv_header_apply_colors(RootMenuWindowData *data, GColor background, GColor foreground);
 
 void root_menu_window_push() {
   Window* window = bwindow_create();
@@ -116,11 +132,11 @@ static void prv_window_load(Window* window) {
   RootMenuWindowData* data = window_get_user_data(window);
   Layer* root_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_frame(root_layer);
-  data->status_bar = bstatus_bar_layer_create();
-  bobby_status_bar_config(data->status_bar);
-  layer_add_child(root_layer, status_bar_layer_get_layer(data->status_bar));
-  data->menu_layer = bmenu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT,
-      window_bounds.size.w, window_bounds.size.h - STATUS_BAR_LAYER_HEIGHT));
+  prv_header_create(window);
+  prv_header_apply_colors(data, GColorWhite, GColorBlack);
+  data->tick_handle = events_tick_timer_service_subscribe_context(MINUTE_UNIT, prv_header_tick_handler, window);
+  data->menu_layer = bmenu_layer_create(GRect(0, MENU_CONTENT_TOP,
+      window_bounds.size.w, window_bounds.size.h - MENU_CONTENT_TOP));
   menu_layer_set_callbacks(data->menu_layer, window, (MenuLayerCallbacks) {
     .get_num_rows = prv_num_rows,
     .get_cell_height = prv_cell_height,
@@ -134,17 +150,59 @@ static void prv_window_load(Window* window) {
   layer_add_child(root_layer, menu_layer_get_layer(data->menu_layer));
 }
 
+static void prv_header_separator_update(Layer *layer, GContext *ctx) {
+  graphics_context_set_fill_color(ctx, COLOR_FALLBACK(GColorDarkGray, GColorBlack));
+  graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
+}
+
+static void prv_header_create(Window* window) {
+  RootMenuWindowData* data = window_get_user_data(window);
+  Layer* root_layer = window_get_root_layer(window);
+  GRect window_bounds = layer_get_frame(root_layer);
+  data->header_layer = btext_layer_create(GRect(0, 0, window_bounds.size.w, MENU_HEADER_HEIGHT));
+  text_layer_set_font(data->header_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(data->header_layer, GTextAlignmentCenter);
+  layer_add_child(root_layer, text_layer_get_layer(data->header_layer));
+  data->header_separator = blayer_create(GRect(0, MENU_HEADER_HEIGHT, window_bounds.size.w, 1));
+  layer_set_update_proc(data->header_separator, prv_header_separator_update);
+  layer_add_child(root_layer, data->header_separator);
+  prv_header_update_time(data);
+}
+
+static void prv_header_update_time(RootMenuWindowData *data) {
+  time_t now = time(NULL);
+  format_time(data->header_time, sizeof(data->header_time), localtime(&now));
+  text_layer_set_text(data->header_layer, data->header_time);
+}
+
+static void prv_header_tick_handler(struct tm* tick_time, TimeUnits units_changed, void* context) {
+  RootMenuWindowData *data = window_get_user_data(context);
+  format_time(data->header_time, sizeof(data->header_time), tick_time);
+  text_layer_set_text(data->header_layer, data->header_time);
+}
+
+static void prv_header_apply_colors(RootMenuWindowData *data, GColor background, GColor foreground) {
+  text_layer_set_background_color(data->header_layer, background);
+  text_layer_set_text_color(data->header_layer, foreground);
+}
+
 static void prv_window_appear(Window* window) {
   RootMenuWindowData* data = window_get_user_data(window);
   mica_page_apply_background(window);
-  mica_page_status_bar_colors(data->status_bar);
+  prv_header_apply_colors(data, mica_page_color(), GColorBlack);
+  prv_header_update_time(data);
   menu_layer_set_normal_colors(data->menu_layer, mica_page_color(), GColorBlack);
 }
 
 static void prv_window_unload(Window* window) {
   RootMenuWindowData* data = window_get_user_data(window);
+  if (data->tick_handle) {
+    events_tick_timer_service_unsubscribe(data->tick_handle);
+    data->tick_handle = NULL;
+  }
   menu_layer_destroy(data->menu_layer);
-  status_bar_layer_destroy(data->status_bar);
+  text_layer_destroy(data->header_layer);
+  layer_destroy(data->header_separator);
   for (uint32_t i = 0; i < 8; i++) {
     if (s_items[i].icon) {
       gbitmap_destroy(s_items[i].icon);

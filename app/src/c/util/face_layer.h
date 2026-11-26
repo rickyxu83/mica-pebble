@@ -9,9 +9,12 @@
 // The face scales to whatever frame it is given; the same layer serves
 // as the large home-screen mascot and as the small "thinking" face.
 //
-// Expressions are set explicitly with face_layer_set_expression(); the
-// layer owns no timers or animations, so callers drive blinking, idle
-// acts and the thinking face's wandering gaze themselves.
+// Expressions are set explicitly with face_layer_set_expression();
+// callers drive blinking, idle acts and the thinking face's wandering
+// gaze themselves. The one exception is the self-contained idle driver
+// (face_layer_idle_start/stop below), which steps the same expression
+// rotation as the home-screen mascot for callers that just want a
+// living face (e.g. menu empty states).
 
 typedef enum {
   FaceEyeDot = 0,  // Vertical capsules (the resting eyes).
@@ -64,3 +67,14 @@ void face_layer_set_expression(FaceLayer *layer, FaceEyeKind left_eye,
 // Progress is in permille (0..1000); 1000 (the default) is the
 // finished face. Callers drive the progress with their own timer.
 void face_layer_set_intro_progress(FaceLayer *layer, uint16_t permille);
+
+// Self-contained idle performance: steps the home mascot's expression
+// rotation (2 s slots: happy, look-around, hearts, sunglasses, flower,
+// sleepy + Zzz, music, wink, then a rest slot with one mid-slot blink)
+// on a timer owned by the layer. No intro morph — the intro progress
+// stays at 1000. Exactly one timer is ever outstanding; starting an
+// already-running driver is a no-op. face_layer_idle_stop() cancels
+// the timer and leaves the current expression on screen; destroy also
+// stops the driver, but callers should stop it explicitly first.
+void face_layer_idle_start(FaceLayer *layer);
+void face_layer_idle_stop(FaceLayer *layer);

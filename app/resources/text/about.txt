@@ -5,10 +5,15 @@ A multi-provider AI assistant for Pebble.
 Uses your own API keys. No Mica helper service or subscription.
 Android enhanced mode is optional when available.
 
+## 作者
+rickyxu83
+Mica 的作者与维护者。
+
 ## Mica
 Based on Billy by Thomas Bolger and Bobby / Tiny Assistant by the Rebble and Pebble community. Modified for Mica with multi-provider support and custom OpenAI-compatible endpoints.
 
 ## Programming
+rickyxu83
 Thomas Bolger
 Katharine Berry
 Mica contributors

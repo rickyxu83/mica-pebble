@@ -16,6 +16,7 @@
  */
 
 #include "reminders_menu.h"
+#include "../util/face_layer.h"
 #include "../util/fonts.h"
 #include "../util/style.h"
 #include "../util/round.h"
@@ -35,15 +36,23 @@ typedef struct {
   time_t time;
 } Reminder;
 
+// Custom page header replacing the firmware status bar (whose time
+// text is tiny and not resizable): a 36 px time line in
+// GOTHIC_28_BOLD over a 1 px separator; content starts below both.
+#define MENU_HEADER_HEIGHT 36
+#define MENU_CONTENT_TOP (MENU_HEADER_HEIGHT + 1)
+
 typedef struct {
   Window *window;
   MenuLayer *menu_layer;
-  StatusBarLayer *status_bar;
+  TextLayer *header_layer;
+  Layer *header_separator;
   ThinkingLayer *loading_layer;
   TextLayer *empty_text_layer;
-  GBitmap *sleeping_horse_image;
-  BitmapLayer *sleeping_horse_layer;
+  FaceLayer *empty_face_layer;
   EventHandle app_message_handle;
+  EventHandle header_tick_handle;
+  char header_time[8];
   Reminder *reminders;
   uint16_t num_reminders;
   uint16_t reminders_capacity;
@@ -61,6 +70,10 @@ static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void 
 static void prv_delete_reminder_callback(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_show_empty(Window *window);
 static void prv_action_menu_did_close(ActionMenu *action_menu, const ActionMenuItem *menu_item, void *context);
+static void prv_header_tick_handler(struct tm *tick_time, TimeUnits units_changed, void *context);
+static void prv_header_create(Window *window);
+static void prv_header_update_time(RemindersMenuData *data);
+static void prv_header_apply_colors(RemindersMenuData *data, GColor background, GColor foreground);
 
 void reminders_menu_push() {
   Window *window = bwindow_create();
@@ -91,7 +104,7 @@ static void prv_show_empty(Window *window) {
 
   // Create empty state text if not exists
   if (!data->empty_text_layer) {
-    data->empty_text_layer = btext_layer_create(GRect(10, 20, bounds.size.w - 20, bounds.size.h - 60));
+    data->empty_text_layer = btext_layer_create(GRect(10, MENU_CONTENT_TOP + 4, bounds.size.w - 20, bounds.size.h - MENU_CONTENT_TOP - 44));
     text_layer_set_text_color(data->empty_text_layer, gcolor_legible_over(ACCENT_COLOUR));
     text_layer_set_background_color(data->empty_text_layer, GColorClear);
     text_layer_set_font(data->empty_text_layer, fonts->title_font);
@@ -99,19 +112,56 @@ static void prv_show_empty(Window *window) {
     text_layer_set_text(data->empty_text_layer, S(STR_NO_REMINDERS));
   }
 
-  // Create sleeping horse if not exists
-  if (!data->sleeping_horse_image) {
-    data->sleeping_horse_image = bgbitmap_create_with_resource(RESOURCE_ID_MICA_MARK);
-    data->sleeping_horse_layer = bbitmap_layer_create(GRect(bounds.size.w / 2 - 32, bounds.size.h - 88, 64, 64));
-    bitmap_layer_set_bitmap(data->sleeping_horse_layer, data->sleeping_horse_image);
-    bitmap_layer_set_background_color(data->sleeping_horse_layer, GColorClear);
-    bitmap_layer_set_compositing_mode(data->sleeping_horse_layer, GCompOpSet);
+  // Create the empty state's mascot if not exists: a live face
+  // running its idle expression rotation, in the frame the static
+  // mark bitmap used to occupy.
+  if (!data->empty_face_layer) {
+    data->empty_face_layer = face_layer_create(GRect(bounds.size.w / 2 - 32, bounds.size.h - 88, 64, 64));
+    face_layer_set_expression(data->empty_face_layer, FaceEyeDot, FaceEyeDot,
+        FaceMouthOmega, 0, 0, 0, FacePropNone);
   }
 
   window_set_background_color(window, BRANDED_BACKGROUND_COLOUR);
-  bobby_status_bar_result_pane_config(data->status_bar);
+  prv_header_apply_colors(data, BRANDED_BACKGROUND_COLOUR, gcolor_legible_over(BRANDED_BACKGROUND_COLOUR));
   layer_add_child(root_layer, text_layer_get_layer(data->empty_text_layer));
-  layer_add_child(root_layer, bitmap_layer_get_layer(data->sleeping_horse_layer));
+  layer_add_child(root_layer, face_layer_get_layer(data->empty_face_layer));
+  face_layer_idle_start(data->empty_face_layer);
+}
+
+static void prv_header_separator_update(Layer *layer, GContext *ctx) {
+  graphics_context_set_fill_color(ctx, COLOR_FALLBACK(GColorDarkGray, GColorBlack));
+  graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
+}
+
+static void prv_header_create(Window *window) {
+  RemindersMenuData *data = window_get_user_data(window);
+  Layer *root_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_bounds(root_layer);
+  data->header_layer = btext_layer_create(GRect(0, 0, bounds.size.w, MENU_HEADER_HEIGHT));
+  text_layer_set_font(data->header_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_alignment(data->header_layer, GTextAlignmentCenter);
+  layer_add_child(root_layer, text_layer_get_layer(data->header_layer));
+  data->header_separator = blayer_create(GRect(0, MENU_HEADER_HEIGHT, bounds.size.w, 1));
+  layer_set_update_proc(data->header_separator, prv_header_separator_update);
+  layer_add_child(root_layer, data->header_separator);
+  prv_header_update_time(data);
+}
+
+static void prv_header_update_time(RemindersMenuData *data) {
+  time_t now = time(NULL);
+  format_time(data->header_time, sizeof(data->header_time), localtime(&now));
+  text_layer_set_text(data->header_layer, data->header_time);
+}
+
+static void prv_header_tick_handler(struct tm *tick_time, TimeUnits units_changed, void *context) {
+  RemindersMenuData *data = window_get_user_data(context);
+  format_time(data->header_time, sizeof(data->header_time), tick_time);
+  text_layer_set_text(data->header_layer, data->header_time);
+}
+
+static void prv_header_apply_colors(RemindersMenuData *data, GColor background, GColor foreground) {
+  text_layer_set_background_color(data->header_layer, background);
+  text_layer_set_text_color(data->header_layer, foreground);
 }
 
 static void prv_window_load(Window *window) {
@@ -121,13 +171,13 @@ static void prv_window_load(Window *window) {
 
   window_set_background_color(window, BRANDED_BACKGROUND_COLOUR);
 
-  data->status_bar = bstatus_bar_layer_create();
-  bobby_status_bar_result_pane_config(data->status_bar);
-  layer_add_child(root_layer, status_bar_layer_get_layer(data->status_bar));
+  prv_header_create(window);
+  prv_header_apply_colors(data, BRANDED_BACKGROUND_COLOUR, gcolor_legible_over(BRANDED_BACKGROUND_COLOUR));
+  data->header_tick_handle = events_tick_timer_service_subscribe_context(MINUTE_UNIT, prv_header_tick_handler, window);
 
   // Create menu layer but don't add it yet
-  data->menu_layer = bmenu_layer_create(GRect(0, STATUS_BAR_LAYER_HEIGHT,
-    bounds.size.w, bounds.size.h - STATUS_BAR_LAYER_HEIGHT));
+  data->menu_layer = bmenu_layer_create(GRect(0, MENU_CONTENT_TOP,
+    bounds.size.w, bounds.size.h - MENU_CONTENT_TOP));
   menu_layer_set_callbacks(data->menu_layer, window, (MenuLayerCallbacks) {
     .get_num_rows = prv_get_num_rows,
     .draw_row = prv_draw_row,
@@ -152,22 +202,28 @@ static void prv_window_load(Window *window) {
 static void prv_window_appear(Window *window) {
   RemindersMenuData *data = window_get_user_data(window);
   mica_page_apply_background(window);
-  mica_page_status_bar_colors(data->status_bar);
+  prv_header_apply_colors(data, mica_page_color(), GColorBlack);
+  prv_header_update_time(data);
 }
 
 static void prv_window_unload(Window *window) {
   RemindersMenuData *data = window_get_user_data(window);
+  if (data->header_tick_handle) {
+    events_tick_timer_service_unsubscribe(data->header_tick_handle);
+    data->header_tick_handle = NULL;
+  }
   menu_layer_destroy(data->menu_layer);
-  status_bar_layer_destroy(data->status_bar);
+  text_layer_destroy(data->header_layer);
+  layer_destroy(data->header_separator);
   if (data->loading_layer) {
     thinking_layer_destroy(data->loading_layer);
   }
   if (data->empty_text_layer) {
     text_layer_destroy(data->empty_text_layer);
   }
-  if (data->sleeping_horse_layer) {
-    bitmap_layer_destroy(data->sleeping_horse_layer);
-    gbitmap_destroy(data->sleeping_horse_image);
+  if (data->empty_face_layer) {
+    face_layer_idle_stop(data->empty_face_layer);
+    face_layer_destroy(data->empty_face_layer);
   }
   events_app_message_unsubscribe(data->app_message_handle);
   
@@ -230,7 +286,7 @@ static void prv_app_message_received(DictionaryIterator *iter, void *context) {
     // If we've received all reminders, show the menu
     if (data->num_reminders == data->reminders_capacity) {
       window_set_background_color(window, GColorWhite);
-      bobby_status_bar_config(data->status_bar);
+      prv_header_apply_colors(data, GColorWhite, GColorBlack);
       data->loading = false;
       layer_remove_from_parent(data->loading_layer);
       layer_add_child(root_layer, menu_layer_get_layer(data->menu_layer));

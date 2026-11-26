@@ -25,9 +25,15 @@ typedef struct {
   int16_t look_y;
   uint32_t wave_phase;
   uint16_t intro_progress;
+  AppTimer *idle_timer;
+  uint8_t idle_slot;
+  uint16_t idle_slot_elapsed_ms;
+  bool idle_slot_released;
+  bool idle_running;
 } FaceLayerData;
 
 static void prv_layer_render(Layer *layer, GContext *ctx);
+static void prv_idle_timer(void *context);
 
 FaceLayer *face_layer_create(GRect frame) {
   FaceLayer *layer = blayer_create_with_data(frame, sizeof(FaceLayerData));
@@ -40,11 +46,18 @@ FaceLayer *face_layer_create(GRect frame) {
   data->look_x = 0;
   data->look_y = 0;
   data->wave_phase = 0;
+  data->idle_timer = NULL;
+  data->idle_slot = 0;
+  data->idle_slot_elapsed_ms = 0;
+  data->idle_slot_released = false;
+  data->idle_running = false;
   layer_set_update_proc(layer, prv_layer_render);
   return layer;
 }
 
 void face_layer_destroy(FaceLayer *layer) {
+  // Safety net: never leave the idle timer pointing at freed data.
+  face_layer_idle_stop(layer);
   layer_destroy(layer);
 }
 
@@ -477,5 +490,182 @@ static void prv_layer_render(Layer *layer, GContext *ctx) {
       break;
     default:
       break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Idle driver: the home mascot's expression rotation, packaged so any
+// face can run it without its own state machine (used by the menu
+// empty states). Same acts, same order, same 2 s slots as root_window.c;
+// no intro morph. One chained AppTimer, exactly one outstanding.
+
+#define FACE_IDLE_TICK_MS 100
+#define FACE_IDLE_SLOT_MS 2000
+#define FACE_IDLE_BLINK_START_MS 900
+#define FACE_IDLE_BLINK_CLOSE_MS 150
+#define FACE_IDLE_WINK_CLOSE_MS 800
+
+enum {
+  FACE_IDLE_SLOT_HAPPY = 0,
+  FACE_IDLE_SLOT_LOOK_AROUND,
+  FACE_IDLE_SLOT_HEARTS,
+  FACE_IDLE_SLOT_COOL,
+  FACE_IDLE_SLOT_FLOWER,
+  FACE_IDLE_SLOT_SLEEPY,
+  FACE_IDLE_SLOT_MUSIC,
+  FACE_IDLE_SLOT_WINK,
+  FACE_IDLE_SLOT_BLINK
+};
+
+static const uint8_t s_face_idle_rotation[] = {
+    FACE_IDLE_SLOT_HAPPY, FACE_IDLE_SLOT_LOOK_AROUND,
+    FACE_IDLE_SLOT_HEARTS, FACE_IDLE_SLOT_COOL, FACE_IDLE_SLOT_FLOWER,
+    FACE_IDLE_SLOT_SLEEPY, FACE_IDLE_SLOT_MUSIC, FACE_IDLE_SLOT_WINK,
+    FACE_IDLE_SLOT_BLINK
+};
+#define FACE_IDLE_ROTATION_COUNT \
+  (sizeof(s_face_idle_rotation) / sizeof(s_face_idle_rotation[0]))
+
+static void prv_idle_set_rest(FaceLayer *layer) {
+  face_layer_set_expression(layer, FaceEyeDot, FaceEyeDot,
+      FaceMouthOmega, 0, 0, 0, FacePropNone);
+}
+
+// Applies the frame for the current rotation slot at the given elapsed
+// time within the slot; mirrors prv_expression_apply_slot in
+// root_window.c. Static slots simply (re)assert their expression;
+// blink and wink release back to rest partway through, and
+// look-around / sleepy animate on every call.
+static void prv_idle_apply_slot(FaceLayer *layer, uint16_t elapsed_ms) {
+  FaceLayerData *data = layer_get_data(layer);
+  switch (s_face_idle_rotation[data->idle_slot]) {
+    case FACE_IDLE_SLOT_BLINK:
+      // The cycle's one calm slot: rest, with a single blink in the
+      // middle (closed BLINK_START_MS..+CLOSE_MS).
+      if (elapsed_ms >= FACE_IDLE_BLINK_START_MS &&
+          elapsed_ms < FACE_IDLE_BLINK_START_MS + FACE_IDLE_BLINK_CLOSE_MS) {
+        face_layer_set_expression(layer, FaceEyeBlink, FaceEyeBlink,
+            FaceMouthOmega, 0, 0, 0, FacePropNone);
+      } else if (elapsed_ms >=
+          FACE_IDLE_BLINK_START_MS + FACE_IDLE_BLINK_CLOSE_MS) {
+        if (!data->idle_slot_released) {
+          data->idle_slot_released = true;
+          prv_idle_set_rest(layer);
+        }
+      } else {
+        prv_idle_set_rest(layer);
+      }
+      break;
+    case FACE_IDLE_SLOT_HAPPY:
+      face_layer_set_expression(layer, FaceEyeHappy, FaceEyeHappy,
+          FaceMouthOmega, 0, 0, 0, FacePropNone);
+      break;
+    case FACE_IDLE_SLOT_WINK:
+      if (elapsed_ms < FACE_IDLE_WINK_CLOSE_MS) {
+        face_layer_set_expression(layer, FaceEyeBlink, FaceEyeDot,
+            FaceMouthOmega, 0, 0, 0, FacePropNone);
+      } else if (!data->idle_slot_released) {
+        data->idle_slot_released = true;
+        prv_idle_set_rest(layer);
+      }
+      break;
+    case FACE_IDLE_SLOT_LOOK_AROUND: {
+      // Sweep the gaze -4 -> +4 -> 0 across the slot.
+      const uint16_t half = FACE_IDLE_SLOT_MS / 2;
+      int16_t look_x;
+      if (elapsed_ms < half) {
+        look_x = (int16_t)(-4 + 8 * (int32_t)elapsed_ms / half);
+      } else {
+        look_x = (int16_t)(4 - 4 * (int32_t)(elapsed_ms - half) / half);
+      }
+      face_layer_set_expression(layer, FaceEyeSmall, FaceEyeSmall,
+          FaceMouthOmega, look_x, 0, 0, FacePropNone);
+      break;
+    }
+    case FACE_IDLE_SLOT_HEARTS:
+      face_layer_set_expression(layer, FaceEyeHeart, FaceEyeHeart,
+          FaceMouthOmega, 0, 0, 0, FacePropNone);
+      break;
+    case FACE_IDLE_SLOT_SLEEPY:
+      // wave_phase carries the slot's elapsed ms so the Zs drift.
+      face_layer_set_expression(layer, FaceEyeSleepy, FaceEyeSleepy,
+          FaceMouthFlat, 0, 0, elapsed_ms, FacePropZzz);
+      break;
+    case FACE_IDLE_SLOT_COOL:
+      face_layer_set_expression(layer, FaceEyeDot, FaceEyeDot,
+          FaceMouthOmega, 0, 0, 0, FacePropSunglasses);
+      break;
+    case FACE_IDLE_SLOT_FLOWER:
+      face_layer_set_expression(layer, FaceEyeHappy, FaceEyeHappy,
+          FaceMouthOmega, 0, 0, 0, FacePropFlower);
+      break;
+    case FACE_IDLE_SLOT_MUSIC:
+      face_layer_set_expression(layer, FaceEyeHappy, FaceEyeHappy,
+          FaceMouthOmega, 0, 0, 0, FacePropMusicNote);
+      break;
+    default:
+      prv_idle_set_rest(layer);
+      break;
+  }
+}
+
+static void prv_idle_timer(void *context) {
+  FaceLayer *layer = context;
+  FaceLayerData *data = layer_get_data(layer);
+  data->idle_timer = NULL;
+  if (!data->idle_running) {
+    return;
+  }
+  const uint16_t prev_elapsed = data->idle_slot_elapsed_ms;
+  data->idle_slot_elapsed_ms += FACE_IDLE_TICK_MS;
+  if (data->idle_slot_elapsed_ms >= FACE_IDLE_SLOT_MS) {
+    data->idle_slot = (data->idle_slot + 1) % FACE_IDLE_ROTATION_COUNT;
+    data->idle_slot_elapsed_ms = 0;
+    data->idle_slot_released = false;
+    prv_idle_apply_slot(layer, 0);
+  } else {
+    // Mid-slot updates only where the frame actually changes: the
+    // animated acts, and the moment a blink/wink releases.
+    const uint8_t kind = s_face_idle_rotation[data->idle_slot];
+    const uint16_t elapsed = data->idle_slot_elapsed_ms;
+    if (kind == FACE_IDLE_SLOT_LOOK_AROUND ||
+        kind == FACE_IDLE_SLOT_SLEEPY ||
+        (kind == FACE_IDLE_SLOT_BLINK &&
+            ((prev_elapsed < FACE_IDLE_BLINK_START_MS &&
+                elapsed >= FACE_IDLE_BLINK_START_MS) ||
+             (prev_elapsed <
+                    FACE_IDLE_BLINK_START_MS + FACE_IDLE_BLINK_CLOSE_MS &&
+                elapsed >=
+                    FACE_IDLE_BLINK_START_MS + FACE_IDLE_BLINK_CLOSE_MS))) ||
+        (kind == FACE_IDLE_SLOT_WINK &&
+            prev_elapsed < FACE_IDLE_WINK_CLOSE_MS &&
+            elapsed >= FACE_IDLE_WINK_CLOSE_MS)) {
+      prv_idle_apply_slot(layer, elapsed);
+    }
+  }
+  data->idle_timer = app_timer_register(FACE_IDLE_TICK_MS,
+      prv_idle_timer, layer);
+}
+
+void face_layer_idle_start(FaceLayer *layer) {
+  FaceLayerData *data = layer_get_data(layer);
+  if (data->idle_running) {
+    return;
+  }
+  data->idle_running = true;
+  data->idle_slot = 0;
+  data->idle_slot_elapsed_ms = 0;
+  data->idle_slot_released = false;
+  prv_idle_apply_slot(layer, 0);
+  data->idle_timer = app_timer_register(FACE_IDLE_TICK_MS,
+      prv_idle_timer, layer);
+}
+
+void face_layer_idle_stop(FaceLayer *layer) {
+  FaceLayerData *data = layer_get_data(layer);
+  data->idle_running = false;
+  if (data->idle_timer) {
+    app_timer_cancel(data->idle_timer);
+    data->idle_timer = NULL;
   }
 }
