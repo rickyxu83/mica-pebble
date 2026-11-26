@@ -263,6 +263,32 @@
         ]
       },
       {
+        "type": "select",
+        "id": "THEME_COLOUR",
+        "messageKey": "THEME_COLOUR",
+        "label": "主题颜色 / Theme colour",
+        "description": "页面底色与品牌色。切换后新打开的页面生效，重新打开 Mica 后全面生效。",
+        "defaultValue": "1",
+        "options": [
+          {
+            "label": "薰衣草紫 Lavender",
+            "value": "1"
+          },
+          {
+            "label": "天蓝 Celeste",
+            "value": "2"
+          },
+          {
+            "label": "薄荷绿 Mint",
+            "value": "3"
+          },
+          {
+            "label": "蜜瓜粉 Melon",
+            "value": "4"
+          }
+        ]
+      },
+      {
         "type": "toggle",
         "id": "USE_SYSTEM_CJK_FONT",
         "messageKey": "USE_SYSTEM_CJK_FONT",

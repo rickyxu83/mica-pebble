@@ -66,7 +66,7 @@ void root_menu_window_push() {
     .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static uint16_t prv_num_rows(MenuLayer *menu_layer, uint16_t section, void *context) {
@@ -136,7 +136,7 @@ static void prv_window_load(Window* window) {
 
 static void prv_window_appear(Window* window) {
   RootMenuWindowData* data = window_get_user_data(window);
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   mica_page_status_bar_colors(data->status_bar);
   menu_layer_set_normal_colors(data->menu_layer, mica_page_color(), GColorBlack);
 }

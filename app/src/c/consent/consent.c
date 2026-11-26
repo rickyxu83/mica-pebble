@@ -74,7 +74,7 @@ void consent_window_push() {
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 bool must_present_consent() {
@@ -152,7 +152,7 @@ static void prv_click_config_provider(void *context) {
 
 
 static void prv_window_appear(Window *window) {
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   prv_set_stage(window, STAGE_LLM_WARNING);
 }
 

@@ -67,7 +67,7 @@ void result_window_push(const char* title, const char* text, GDrawCommandImage *
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 void result_window_push_bitmap(const char* title, const char* text, GBitmap *image, GColor background_color) {
@@ -91,7 +91,7 @@ void result_window_push_bitmap(const char* title, const char* text, GBitmap *ima
     .unload = prv_window_unload,
     .appear = prv_window_appear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_window_load(Window* window) {
@@ -165,9 +165,9 @@ static void prv_window_unload(Window* window) {
 static void prv_window_appear(Window* window) {
   ResultWindowData* data = window_get_user_data(window);
 #ifdef PBL_COLOR
-  mica_animate_window_push_colored(window, data->background_color);
+  mica_page_apply_background_colored(window, data->background_color);
 #else
-  mica_animate_window_push_colored(window, GColorWhite);
+  mica_page_apply_background_colored(window, GColorWhite);
 #endif
   if (data->timer) {
     app_timer_cancel(data->timer);

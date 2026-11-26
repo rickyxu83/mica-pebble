@@ -73,7 +73,7 @@ void reminders_menu_push() {
     .appear = prv_window_appear,
     .unload = prv_window_unload,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_show_empty(Window *window) {
@@ -151,7 +151,7 @@ static void prv_window_load(Window *window) {
 
 static void prv_window_appear(Window *window) {
   RemindersMenuData *data = window_get_user_data(window);
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   mica_page_status_bar_colors(data->status_bar);
 }
 

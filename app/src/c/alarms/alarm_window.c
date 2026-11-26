@@ -82,7 +82,7 @@ void alarm_window_push(time_t alarm_time, bool is_timer, char *name) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_window_load(Window *window) {
@@ -158,7 +158,7 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
-  mica_animate_window_push_colored(window, COLOR_FALLBACK(ACCENT_COLOUR, GColorWhite));
+  mica_page_apply_background_colored(window, COLOR_FALLBACK(ACCENT_COLOUR, GColorWhite));
   AlarmWindowData* data = window_get_user_data(window);
   light_enable_interaction();
   prv_do_vibe(window);

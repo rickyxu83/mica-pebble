@@ -58,6 +58,14 @@ VibePatternSetting settings_get_timer_vibe_pattern() {
   return result;
 }
 
+ThemeColour settings_get_theme_colour() {
+  int result = persist_read_int(PERSIST_KEY_THEME_COLOUR);
+  if (result < ThemeColourLavender || result > ThemeColourMelon) {
+    return ThemeColourLavender;
+  }
+  return result;
+}
+
 bool settings_get_should_confirm_transcripts() {
   // the default is false, so we don't have to check whether it exists.
   return persist_read_bool(PERSIST_KEY_CONFIRM_TRANSCRIPTS);
@@ -97,6 +105,8 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
     } else if (tuple->key == MESSAGE_KEY_USE_SYSTEM_CJK_FONT) {
       // Applied on next launch so custom fonts reload consistently.
       persist_write_bool(PERSIST_KEY_USE_SYSTEM_CJK_FONT, tuple->value->int8);
+    } else if (tuple->key == MESSAGE_KEY_THEME_COLOUR) {
+      persist_write_int(PERSIST_KEY_THEME_COLOUR, atoi(tuple->value->cstring));
     } else if (tuple->key == MESSAGE_KEY_UI_LANGUAGE) {
       // Applied on the next app launch so custom fonts reload consistently.
       persist_write_int(PERSIST_KEY_UI_LANGUAGE, atoi(tuple->value->cstring));

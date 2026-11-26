@@ -38,6 +38,19 @@
 #include "report_window.h"
 
 #define PADDING 5
+// New conversation segments slide up into place from this many pixels
+// below their resting position.
+#define SEGMENT_ARRIVAL_OFFSET_PX 10
+#define SEGMENT_ARRIVAL_MS 250
+// How long the thinking layer takes to glide after a streaming segment
+// whose height changed.
+#define THINKING_GLUE_MS 120
+// The view counts as "at the bottom" (and so follows new content) when
+// it is within this many pixels of the end of the content.
+#define SCROLL_FOLLOW_NEAR_BOTTOM_PX 32
+// Minimum spacing between animated follow-scrolls; requests made inside
+// the window are coalesced into one scroll to the latest target.
+#define SCROLL_FOLLOW_MIN_INTERVAL_MS 150
 #define CLARIFICATION_DICTATE_OPTION S(STR_DICTATE)
 // How many times a system-interrupted dictation restarts itself before
 // giving up and behaving as if the dictation had simply ended.
@@ -65,6 +78,12 @@ struct SessionWindow {
   int last_prompt_end_offset;
   time_t query_time;
   AppTimer *timeout_handle;
+  Animation *arrival_animation;
+  SegmentLayer *arrival_layer;
+  Animation *thinking_move_animation;
+  AppTimer *scroll_anim_timer;
+  int pending_scroll_target;
+  bool scroll_target_pending;
   int timeout;
   char* starting_prompt;
   char* last_prompt_label;
@@ -85,6 +104,10 @@ static void prv_up_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_down_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_back_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_update_thinking_layer(SessionWindow* sw);
+static void prv_cancel_arrival_animation(SessionWindow *sw);
+static void prv_cancel_thinking_move(SessionWindow *sw);
+static void prv_cancel_follow_scroll(SessionWindow *sw);
+static void prv_follow_scroll_timer(void *context);
 static int16_t prv_content_height(const SessionWindow* sw);
 static void prv_scrolled_handler(ScrollLayer* scroll_layer, void* context);
 static void prv_refresh_timeout(SessionWindow* sw);
@@ -115,12 +138,15 @@ void session_window_push(int timeout, char *starting_prompt) {
       .appear = prv_window_appear,
       .disappear = prv_window_disappear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_destroy(SessionWindow *sw) {
   BOBBY_LOG(APP_LOG_LEVEL_INFO, "destroying SessionWindow %p.", sw);
   prv_cancel_timeout(sw);
+  prv_cancel_arrival_animation(sw);
+  prv_cancel_thinking_move(sw);
+  prv_cancel_follow_scroll(sw);
   dictation_session_destroy(sw->dictation);
   for (int i = sw->segments_deleted; i < sw->segment_count; ++i) {
     segment_layer_destroy(sw->segment_layers[i]);
@@ -218,7 +244,7 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   SessionWindow *sw = (SessionWindow *)window_get_user_data(window);
   mica_page_status_bar_colors(sw->status_layer);
   if (sw->starting_prompt) {
@@ -328,10 +354,135 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
 }
 
 static int16_t prv_holder_width(SessionWindow *sw) {
-  // Scroll layer content width follows the zoom transition frame while the
-  // push animation runs; conversation content must always use full width.
+  // Scroll layer content width follows the transition frame while the
+  // native push animation runs; conversation content must always use full width.
   GRect bounds = layer_get_frame(window_get_root_layer(sw->window));
   return bounds.size.w;
+}
+
+// --- Small vertical slide animations (segment arrival, thinking glue) ---
+
+typedef struct {
+  SessionWindow *sw;
+  Layer *layer;
+  int16_t from_y;
+  int16_t to_y;
+  bool snap_on_stop;
+  bool is_arrival;
+} YSlideContext;
+
+static void prv_slide_update(Animation *animation, const AnimationProgress progress) {
+  YSlideContext *ctx = animation_get_context(animation);
+  GRect frame = layer_get_frame(ctx->layer);
+  frame.origin.y = ctx->from_y + (int16_t)(((int32_t)ctx->to_y - (int32_t)ctx->from_y) *
+      (int32_t)progress / (int32_t)ANIMATION_NORMALIZED_MAX);
+  layer_set_frame(ctx->layer, frame);
+}
+
+static void prv_slide_stopped(Animation *animation, bool finished, void *context) {
+  YSlideContext *ctx = context;
+  SessionWindow *sw = ctx->sw;
+  if (finished || ctx->snap_on_stop) {
+    GRect frame = layer_get_frame(ctx->layer);
+    frame.origin.y = ctx->to_y;
+    layer_set_frame(ctx->layer, frame);
+  }
+  if (ctx->is_arrival) {
+    if (sw->arrival_animation == animation) {
+      sw->arrival_animation = NULL;
+      sw->arrival_layer = NULL;
+    }
+  } else if (sw->thinking_move_animation == animation) {
+    sw->thinking_move_animation = NULL;
+  }
+  animation_destroy(animation);
+  free(ctx);
+}
+
+static const AnimationImplementation s_slide_implementation = {
+  .update = prv_slide_update,
+};
+
+// Slide a layer's frame origin.y to to_y. Any slide already running in
+// the same slot is cancelled first (its stopped handler cleans up); the
+// new slide starts from the layer's current position, so re-targeting
+// mid-flight is continuous.
+static void prv_slide_layer_y(SessionWindow *sw, Layer *layer, int16_t to_y,
+    uint32_t duration_ms, AnimationCurve curve, bool snap_on_stop, bool is_arrival) {
+  Animation **slot = is_arrival ? &sw->arrival_animation : &sw->thinking_move_animation;
+  if (*slot) {
+    animation_unschedule(*slot);
+  }
+  GRect frame = layer_get_frame(layer);
+  if (frame.origin.y == to_y) {
+    return;
+  }
+  YSlideContext *ctx = bmalloc(sizeof(YSlideContext));
+  ctx->sw = sw;
+  ctx->layer = layer;
+  ctx->from_y = frame.origin.y;
+  ctx->to_y = to_y;
+  ctx->snap_on_stop = snap_on_stop;
+  ctx->is_arrival = is_arrival;
+  Animation *animation = animation_create();
+  animation_set_duration(animation, duration_ms);
+  animation_set_curve(animation, curve);
+  animation_set_implementation(animation, &s_slide_implementation);
+  animation_set_handlers(animation, (AnimationHandlers) {
+    .stopped = prv_slide_stopped,
+  }, ctx);
+  *slot = animation;
+  if (is_arrival) {
+    sw->arrival_layer = (SegmentLayer *)layer;
+  }
+  animation_schedule(animation);
+}
+
+static void prv_cancel_arrival_animation(SessionWindow *sw) {
+  if (sw->arrival_animation) {
+    animation_unschedule(sw->arrival_animation);
+  }
+}
+
+static void prv_cancel_thinking_move(SessionWindow *sw) {
+  if (sw->thinking_move_animation) {
+    animation_unschedule(sw->thinking_move_animation);
+  }
+}
+
+// --- Auto-follow scrolling (animated, coalesced, only from the bottom) ---
+
+static void prv_apply_follow_scroll(SessionWindow *sw) {
+  sw->scroll_target_pending = false;
+  scroll_layer_set_content_offset(sw->scroll_layer, GPoint(0, sw->pending_scroll_target), true);
+  sw->scroll_anim_timer = app_timer_register(SCROLL_FOLLOW_MIN_INTERVAL_MS,
+      prv_follow_scroll_timer, sw);
+}
+
+static void prv_follow_scroll_timer(void *context) {
+  SessionWindow *sw = context;
+  sw->scroll_anim_timer = NULL;
+  if (sw->scroll_target_pending) {
+    prv_apply_follow_scroll(sw);
+  }
+}
+
+static void prv_request_follow_scroll(SessionWindow *sw, int target) {
+  sw->pending_scroll_target = target;
+  if (sw->scroll_anim_timer) {
+    // Inside the coalescing window: just remember the latest target.
+    sw->scroll_target_pending = true;
+    return;
+  }
+  prv_apply_follow_scroll(sw);
+}
+
+static void prv_cancel_follow_scroll(SessionWindow *sw) {
+  if (sw->scroll_anim_timer) {
+    app_timer_cancel(sw->scroll_anim_timer);
+    sw->scroll_anim_timer = NULL;
+  }
+  sw->scroll_target_pending = false;
 }
 
 static void prv_set_scroll_height(SessionWindow* sw) {
@@ -340,11 +491,16 @@ static void prv_set_scroll_height(SessionWindow* sw) {
   if (old_size.h >= new_size.h) {
     return;
   }
-  scroll_layer_set_content_size(sw->scroll_layer, new_size);
+  // Decide whether the user is following the tail *before* the content
+  // grows: if they have scrolled up to read, new content must not yank
+  // the view away from what they are looking at.
+  GRect scroll_frame = layer_get_frame(scroll_layer_get_layer(sw->scroll_layer));
   GPoint offset = scroll_layer_get_content_offset(sw->scroll_layer);
-  if (offset.y > -sw->last_prompt_end_offset) {
-    int scroll_target = -sw->last_prompt_end_offset;
-    scroll_layer_set_content_offset(sw->scroll_layer, GPoint(0, scroll_target), false);
+  bool at_bottom = old_size.h <= scroll_frame.size.h ||
+      (-offset.y + scroll_frame.size.h) >= (old_size.h - SCROLL_FOLLOW_NEAR_BOTTOM_PX);
+  scroll_layer_set_content_size(sw->scroll_layer, new_size);
+  if (at_bottom && offset.y > -sw->last_prompt_end_offset) {
+    prv_request_follow_scroll(sw, -sw->last_prompt_end_offset);
   }
 }
 
@@ -365,6 +521,7 @@ static void prv_update_thinking_layer(SessionWindow* sw) {
 
   if (!visible) {
     if (sw->thinking_layer) {
+      prv_cancel_thinking_move(sw);
       sw->content_height -= THINKING_LAYER_HEIGHT + 5;
       layer_remove_from_parent(sw->thinking_layer);
       thinking_layer_destroy(sw->thinking_layer);
@@ -381,9 +538,11 @@ static void prv_update_thinking_layer(SessionWindow* sw) {
     return;
   }
 
-  GRect frame = layer_get_frame(sw->thinking_layer);
-  frame.origin.y = sw->content_height - THINKING_LAYER_HEIGHT - 5;
-  layer_set_frame(sw->thinking_layer, frame);
+  // Glue: glide to the new resting place instead of teleporting, so the
+  // indicator tracks a streaming segment's growth continuously.
+  int16_t target_y = sw->content_height - THINKING_LAYER_HEIGHT - 5;
+  prv_slide_layer_y(sw, sw->thinking_layer, target_y, THINKING_GLUE_MS,
+      AnimationCurveEaseOut, false, false);
 }
 
 static int16_t prv_content_height(const SessionWindow* sw) {
@@ -399,6 +558,10 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
   if (!entry_added) {
     if (sw->segment_count > sw->segments_deleted) {
       SegmentLayer *layer = sw->segment_layers[sw->segment_count-1];
+      // The update re-lays the segment out; land any arrival slide first.
+      if (sw->arrival_layer == layer) {
+        prv_cancel_arrival_animation(sw);
+      }
       int old_height = layer_get_frame(layer).size.h;
       segment_layer_update(layer);
       int new_height = layer_get_frame(layer).size.h;
@@ -417,6 +580,9 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
     EntryType type = conversation_entry_get_type(segment_layer_get_entry(last_layer));
     if (type == EntryTypeThought) {
       // clean it up
+      if (sw->arrival_layer == last_layer) {
+        prv_cancel_arrival_animation(sw);
+      }
       sw->content_height -= layer_get_frame(last_layer).size.h;
       prv_update_thinking_layer(sw);
       prv_set_scroll_height(sw);
@@ -448,6 +614,13 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
   frame.origin.y = prv_content_height(sw);
   layer_set_frame(layer, frame);
   scroll_layer_add_child(sw->scroll_layer, layer);
+  // Arrive by sliding up into place instead of popping in fully formed.
+  int16_t target_y = layer_get_frame(layer).origin.y;
+  GRect start_frame = layer_get_frame(layer);
+  start_frame.origin.y = target_y + SEGMENT_ARRIVAL_OFFSET_PX;
+  layer_set_frame(layer, start_frame);
+  prv_slide_layer_y(sw, layer, target_y, SEGMENT_ARRIVAL_MS,
+      AnimationCurveEaseOut, true, true);
   int layer_height = layer_get_frame(layer).size.h;
   sw->content_height += layer_height;
   EntryType entry_type = conversation_entry_get_type(entry);
@@ -490,6 +663,9 @@ static void prv_conversation_entry_deleted_handler(int index, void* context) {
     return;
   }
   SessionWindow* sw = context;
+  // Segments are about to be repositioned; land any arrival slide first
+  // so the shift applies to final positions.
+  prv_cancel_arrival_animation(sw);
   // We need to go through every segment that's left and shift it up by the height of the deleted segment
   SegmentLayer *to_delete = sw->segment_layers[sw->segments_deleted];
   int16_t removed_height = layer_get_frame(to_delete).size.h;
@@ -519,10 +695,6 @@ static void prv_conversation_entry_deleted_handler(int index, void* context) {
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Removed top segment; adjusted upward by %d pixels.", removed_height);
 }
 
-static Window *context_window(SessionWindow *sw) {
-  return sw ? sw->window : NULL;
-}
-
 static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
   SessionWindow *sw = context;
   if (sw) {
@@ -532,7 +704,9 @@ static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
   if (sw && sw->dictation) {
     dictation_session_stop(sw->dictation);
   }
-  mica_animate_window_pop(context_window(sw));
+  // Native animated pop: the mirror image of the animated push, so the
+  // conversation leaves the same way it arrived.
+  window_stack_pop(true);
 }
 
 static void prv_click_config_provider(void *context) {

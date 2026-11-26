@@ -47,11 +47,11 @@ void prv_release_notes_push() {
     .appear = prv_appear,
     .unload = prv_unload,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_appear(Window *window) {
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
 }
 
 void release_notes_maybe_push() {

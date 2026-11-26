@@ -65,7 +65,7 @@ void alarm_menu_window_push(bool for_timers) {
     .appear = prv_window_appear,
     .disappear = prv_window_disappear,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
 
 static void prv_window_load(Window* window) {
@@ -138,7 +138,7 @@ static void prv_window_unload(Window* window) {
 }
 
 static void prv_window_appear(Window* window) {
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   AlarmMenuWindowData* data = window_get_user_data(window);
   mica_page_status_bar_colors(data->status_bar);
   if (!data->for_timers) {

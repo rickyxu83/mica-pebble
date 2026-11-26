@@ -184,6 +184,7 @@
       "CLAUDE_API_KEY",
       "CLAUDE_MODEL",
       "UI_LANGUAGE",
+      "THEME_COLOUR",
       "CLEAR_DIAGNOSTICS"
     ],
     "resources": {

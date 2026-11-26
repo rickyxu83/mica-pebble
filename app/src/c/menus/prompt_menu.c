@@ -43,7 +43,7 @@ static void prv_select(MenuLayer *menu, MenuIndex *index, void *context) {
 
 static void prv_appear(Window *window) {
   PromptMenuData *data = window_get_user_data(window);
-  mica_animate_window_push(window);
+  mica_page_apply_background(window);
   menu_layer_set_normal_colors(data->menu, mica_page_color(), GColorBlack);
 }
 
@@ -85,5 +85,5 @@ void prompt_menu_push(char **items, int count) {
     .appear = prv_appear,
     .unload = prv_unload,
   });
-  window_stack_push(window, false);
+  window_stack_push(window, true);
 }
