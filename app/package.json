@@ -185,6 +185,7 @@
       "CLAUDE_MODEL",
       "UI_LANGUAGE",
       "THEME_COLOUR",
+      "IDLE_EXIT_TIMEOUT",
       "CLEAR_DIAGNOSTICS"
     ],
     "resources": {

@@ -289,6 +289,36 @@
         ]
       },
       {
+        "type": "select",
+        "id": "IDLE_EXIT_TIMEOUT",
+        "messageKey": "IDLE_EXIT_TIMEOUT",
+        "label": "待机自动返回表盘 / Idle auto-exit",
+        "description": "停留在首页无操作时自动退出 Mica 回到表盘（系统超时对 Mica 不生效，由应用自身计时）。离开首页即停止计时，回到首页重新计时。",
+        "defaultValue": "30",
+        "options": [
+          {
+            "label": "30 秒（默认）",
+            "value": "30"
+          },
+          {
+            "label": "1 分钟",
+            "value": "60"
+          },
+          {
+            "label": "20 秒",
+            "value": "20"
+          },
+          {
+            "label": "15 秒",
+            "value": "15"
+          },
+          {
+            "label": "关闭",
+            "value": "0"
+          }
+        ]
+      },
+      {
         "type": "toggle",
         "id": "USE_SYSTEM_CJK_FONT",
         "messageKey": "USE_SYSTEM_CJK_FONT",

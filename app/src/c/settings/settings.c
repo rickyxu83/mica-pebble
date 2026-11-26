@@ -66,6 +66,27 @@ ThemeColour settings_get_theme_colour() {
   return result;
 }
 
+int settings_get_idle_exit_timeout() {
+  // Default ON at 30 s: the firmware's own app idle timeout does not
+  // fire while Mica is in the foreground on the owner's watch (it does
+  // fire in system apps such as Timeline), so the app implements the
+  // return-to-watchface itself.
+  if (!persist_exists(PERSIST_KEY_IDLE_EXIT_TIMEOUT)) {
+    return 30;
+  }
+  const int result = persist_read_int(PERSIST_KEY_IDLE_EXIT_TIMEOUT);
+  switch (result) {
+    case 0:
+    case 15:
+    case 20:
+    case 30:
+    case 60:
+      return result;
+    default:
+      return 30;
+  }
+}
+
 bool settings_get_should_confirm_transcripts() {
   // the default is false, so we don't have to check whether it exists.
   return persist_read_bool(PERSIST_KEY_CONFIRM_TRANSCRIPTS);
@@ -107,6 +128,8 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
       persist_write_bool(PERSIST_KEY_USE_SYSTEM_CJK_FONT, tuple->value->int8);
     } else if (tuple->key == MESSAGE_KEY_THEME_COLOUR) {
       persist_write_int(PERSIST_KEY_THEME_COLOUR, atoi(tuple->value->cstring));
+    } else if (tuple->key == MESSAGE_KEY_IDLE_EXIT_TIMEOUT) {
+      persist_write_int(PERSIST_KEY_IDLE_EXIT_TIMEOUT, atoi(tuple->value->cstring));
     } else if (tuple->key == MESSAGE_KEY_UI_LANGUAGE) {
       // Applied on the next app launch so custom fonts reload consistently.
       persist_write_int(PERSIST_KEY_UI_LANGUAGE, atoi(tuple->value->cstring));
