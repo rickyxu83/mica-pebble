@@ -106,6 +106,10 @@ struct SessionWindow {
   int pending_scroll_target;
   bool scroll_target_pending;
   bool dictation_active;
+  // True only while dictation_session_start() is on the stack: presenting
+  // the dictation UI already covers (disappears) this window before the
+  // call returns and dictation_active is set.
+  bool dictation_starting;
   // Quiet Time while dictating: engaged once QUIET_START has been sent for
   // this window, pending while QUIET_READY is still outstanding.
   bool quiet_engaged;
@@ -339,9 +343,10 @@ static void prv_window_appear(Window *window) {
 static void prv_window_disappear(Window *window) {
   SessionWindow *sw = (SessionWindow *)window_get_user_data(window);
   // Leaving the window for good ends any Quiet Time hold. While dictation
-  // is on screen the disappear is just the dictation UI covering this
-  // window, so the hold stays.
-  if (!sw->dictation_active) {
+  // is on screen - or still being presented, which already covers this
+  // window before dictation_session_start() returns - the disappear is
+  // just the dictation UI covering this window, so the hold stays.
+  if (!sw->dictation_active && !sw->dictation_starting) {
     prv_quiet_release(sw);
   }
   if (sw->touch_subscribed) {
@@ -1399,7 +1404,9 @@ static void prv_start_dictation_now(SessionWindow *sw) {
             : "Phone not connected or dictation is unsupported by this Pebble app. Check the connection/app version or use a sample prompt.");
     return;
   }
+  sw->dictation_starting = true;
   DictationSessionStatus start_status = dictation_session_start(sw->dictation);
+  sw->dictation_starting = false;
   if (start_status == DictationSessionStatusSuccess) {
     sw->dictation_active = true;
   } else {
