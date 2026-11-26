@@ -594,10 +594,10 @@ static int32_t prv_touch_velocity_milli_px_per_ms(SessionWindow *sw) {
   if (first == latest || elapsed_ms == 0) {
     return 0;
   }
-  // Samples store finger Y. The content offset follows
-  // start_offset + (start_y - finger_y), so its velocity is the
-  // negative of the finger's Y velocity.
-  return (int32_t)(sw->touch_sample_y[first] - sw->touch_sample_y[latest]) *
+  // Samples store finger Y. The content follows the finger directly
+  // (offset = start_offset + (finger_y - start_y)), so the offset's
+  // velocity is the finger's Y velocity.
+  return (int32_t)(sw->touch_sample_y[latest] - sw->touch_sample_y[first]) *
       1000 / (int32_t)elapsed_ms;
 }
 
@@ -726,7 +726,7 @@ static void prv_touch_event_handler(const TouchEvent *event, void *context) {
       }
       if (sw->touch_moved) {
         const int16_t offset_y = prv_clamp_scroll_offset_y(sw,
-            (int32_t)sw->touch_start_offset_y + sw->touch_start_y - event->y);
+            (int32_t)sw->touch_start_offset_y + event->y - sw->touch_start_y);
         scroll_layer_set_content_offset(sw->scroll_layer,
             GPoint(0, offset_y), false);
       }
@@ -745,7 +745,7 @@ static void prv_touch_event_handler(const TouchEvent *event, void *context) {
           moved ? prv_touch_velocity_milli_px_per_ms(sw) : 0;
       if (moved) {
         const int16_t offset_y = prv_clamp_scroll_offset_y(sw,
-            (int32_t)sw->touch_start_offset_y + sw->touch_start_y - event->y);
+            (int32_t)sw->touch_start_offset_y + event->y - sw->touch_start_y);
         scroll_layer_set_content_offset(sw->scroll_layer,
             GPoint(0, offset_y), false);
       }
