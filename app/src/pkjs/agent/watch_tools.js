@@ -188,7 +188,6 @@ function executeSetAlarm(session, args, callback) {
         callback({error: 'Alarm time is required.'});
         return;
     }
-    session.handleMessage({data: 'fSetting an alarm'});
     callAction(session, {
         action: 'set_alarm',
         isTimer: false,
@@ -204,7 +203,6 @@ function executeSetTimer(session, args, callback) {
         callback({error: 'Timer duration must be a positive number of seconds.'});
         return;
     }
-    session.handleMessage({data: 'fSetting a timer'});
     callAction(session, {
         action: 'set_alarm',
         isTimer: true,
@@ -236,7 +234,6 @@ function executeSetReminder(session, args, callback) {
         }
         time = new Date(Date.now() + delay * 60000).toISOString();
     }
-    session.handleMessage({data: 'fSetting a reminder'});
     callAction(session, {
         action: 'set_reminder',
         what: args.what,
@@ -295,7 +292,6 @@ function executeCall(session, call, args, callback) {
         return;
     case 'get_alarms':
     case 'get_alarm':
-        session.handleMessage({data: 'fChecking your alarms'});
         callAction(session, {action: 'get_alarm', isTimer: false}, callback);
         return;
     case 'delete_alarm':
@@ -303,7 +299,6 @@ function executeCall(session, call, args, callback) {
             callback({error: 'Alarm time is required.'});
             return;
         }
-        session.handleMessage({data: 'fDeleting an alarm'});
         callAction(session, {action: 'set_alarm', isTimer: false, time: args.time, cancel: true}, callback);
         return;
     case 'set_timer':
@@ -311,7 +306,6 @@ function executeCall(session, call, args, callback) {
         return;
     case 'get_timers':
     case 'get_timer':
-        session.handleMessage({data: 'fChecking your timers'});
         callAction(session, {action: 'get_alarm', isTimer: true}, callback);
         return;
     case 'delete_timer':
@@ -319,14 +313,12 @@ function executeCall(session, call, args, callback) {
             callback({error: 'Timer expiration time is required.'});
             return;
         }
-        session.handleMessage({data: 'fDeleting a timer'});
         callAction(session, {action: 'set_alarm', isTimer: true, time: args.time, cancel: true}, callback);
         return;
     case 'set_reminder':
         executeSetReminder(session, args, callback);
         return;
     case 'get_reminders':
-        session.handleMessage({data: 'fChecking your reminders'});
         callAction(session, {action: 'get_reminders'}, callback);
         return;
     case 'delete_reminder':
@@ -334,11 +326,9 @@ function executeCall(session, call, args, callback) {
             callback({error: 'Reminder ID is required. Call get_reminders first to find it.'});
             return;
         }
-        session.handleMessage({data: 'fDeleting a reminder'});
         callAction(session, {action: 'delete_reminder', id: args.id}, callback);
         return;
     case 'update_settings':
-        session.handleMessage({data: 'fUpdating settings'});
         args.action = 'update_settings';
         callAction(session, args, callback);
         return;

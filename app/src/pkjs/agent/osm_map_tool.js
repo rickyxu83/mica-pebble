@@ -77,7 +77,6 @@ exports.execute = function(session, call, callback) {
         callback({status: 'rejected', summary: 'Map destination is required.'});
         return true;
     }
-    session.handleMessage({data: 'fLoading map'});
     resolveDestination(destination, latitude, longitude, function(err, place) {
         if (err) {
             callback({status: 'error', summary: err.message || String(err)});

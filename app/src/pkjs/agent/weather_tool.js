@@ -59,7 +59,6 @@ exports.execute = function(session, call, callback) {
         return false;
     }
     var args = normalizeArguments(call);
-    session.handleMessage({data: 'fChecking weather'});
     resolveWeatherLocation(args, function(locationErr, weatherLocation) {
         if (locationErr) {
             callback({status: 'error', summary: locationErr.message || String(locationErr)});

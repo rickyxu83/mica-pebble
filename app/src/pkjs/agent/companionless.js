@@ -114,42 +114,15 @@ function runModelLoop(session, threadId, history, iteration, progress, searchGro
 }
 
 function startProgress(session, searchGrounding, hasTools) {
-    var active = true;
-    var timers = [];
-
-    function update(text) {
-        if (!active || shouldStandDown(session)) {
-            return;
-        }
-        session.handleMessage({data: 'f' + text});
-    }
-
-    if (searchGrounding) {
-        update('Searching the web');
-        timers.push(setTimeout(function() {
-            update('Reading results');
-        }, 5000));
-        timers.push(setTimeout(function() {
-            update('Still working');
-        }, 15000));
-    } else if (hasTools) {
-        update('Understanding the request');
-    } else {
-        update('Thinking');
-        timers.push(setTimeout(function() {
-            update('Still thinking');
-        }, 5000));
-    }
-
+    // Deliberately silent: the watch's wave-bar thinking indicator is the
+    // only waiting UI (jian's call, 2026-11-26). The former 'f...' status
+    // texts ("Thinking", "Searching the web", "Setting a reminder", ...)
+    // duplicated it as placeholder segments, so no FUNCTION frames are
+    // sent at all any more. The {update, done} shape is kept because the
+    // run loop still calls them.
     return {
-        update: update,
-        done: function() {
-            active = false;
-            timers.forEach(function(timer) {
-                clearTimeout(timer);
-            });
-            timers = [];
-        }
+        update: function(text) {},
+        done: function() {}
     };
 }
 
