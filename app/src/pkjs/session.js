@@ -20,6 +20,7 @@ var actions = require('./actions');
 var widgets = require('./widgets');
 var messageQueue = require('./lib/message_queue').Queue;
 var runtimeRouter = require('./agent/runtime_router');
+var diagnostics = require('./agent/diagnostics');
 
 function Session(prompt, threadId, androidRequestId) {
     this.prompt = prompt;
@@ -38,6 +39,15 @@ Session.prototype.run = function() {
 }
 
 Session.prototype.handleMessage = function(event) {
+    try {
+        this.handleMessageInner(event);
+    } catch (err) {
+        diagnostics.record('exception', 'session.handleMessage: ' + (err && err.message ? err.message : err));
+        throw err;
+    }
+}
+
+Session.prototype.handleMessageInner = function(event) {
     var message = event.data;
     console.log(message);
     if (message[0] == 'c') {

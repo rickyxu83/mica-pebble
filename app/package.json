@@ -1,7 +1,7 @@
 {
   "name": "mica",
   "author": "Thomas Bolger and Mica contributors",
-  "version": "0.2",
+  "version": "0.3",
   "keywords": [
     "pebble-app"
   ],
@@ -183,7 +183,8 @@
       "STATIC_MAP_BASE_URL",
       "CLAUDE_API_KEY",
       "CLAUDE_MODEL",
-      "UI_LANGUAGE"
+      "UI_LANGUAGE",
+      "CLEAR_DIAGNOSTICS"
     ],
     "resources": {
       "media": [

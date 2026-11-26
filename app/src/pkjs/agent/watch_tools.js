@@ -16,6 +16,7 @@
  */
 
 var actions = require('../actions');
+var diagnostics = require('./diagnostics');
 
 function schema(properties, required) {
     var result = {
@@ -154,7 +155,13 @@ exports.getDeclarations = function() {
 exports.shouldExpose = function(prompt) {
     return /\b(timer|timers|alarm|alarms|remind|reminder|reminders|wake\s+me)\b/i.test(prompt) ||
         /\b(cancel|delete|remove|list|show|check|get|create|add|make|schedule|start)\b.*\b(timer|timers|alarm|alarms|reminder|reminders)\b/i.test(prompt) ||
-        /\b(set|use|change|switch|enable|disable|turn)\b.*\b(unit|units|metric|imperial|language|vibration|vibrate|quick launch|confirm|transcript|transcripts)\b/i.test(prompt);
+        /\b(set|use|change|switch|enable|disable|turn)\b.*\b(unit|units|metric|imperial|language|vibration|vibrate|quick launch|confirm|transcript|transcripts)\b/i.test(prompt) ||
+        // Chinese equivalents of the three patterns above. CJK text has no
+        // word boundaries, so these match substrings instead of \b terms.
+        /(提醒|闹钟|起床|叫醒|叫我|计时器|倒计时|定时|分钟后|小时后)/.test(prompt) ||
+        /(取消|删除|删掉|查看|列出|关掉).*(提醒|闹钟|计时器|倒计时|定时)/.test(prompt) ||
+        /(设置|改成|换成|切换|打开|关闭|开启|启用|禁用).*(语言|振动|单位|公制|英制|快捷启动|确认)/.test(prompt) ||
+        /(语言|振动|单位|公制|英制|快捷启动|确认).*(改成|换成|切换|设置)/.test(prompt);
 }
 
 function normalizeArguments(call) {
@@ -237,8 +244,51 @@ function executeSetReminder(session, args, callback) {
     }, callback);
 }
 
+function summarizeToolArgs(args) {
+    var parts = [];
+    if (args.time) {
+        parts.push('time=' + args.time);
+    }
+    if (args.delay_mins !== undefined && args.delay_mins !== null) {
+        parts.push('delay_mins=' + args.delay_mins);
+    }
+    if (args.duration_seconds !== undefined && args.duration_seconds !== null) {
+        parts.push('duration_seconds=' + args.duration_seconds);
+    }
+    if (args.what) {
+        parts.push('what=' + String(args.what).substring(0, 60));
+    }
+    if (args.name) {
+        parts.push('name=' + args.name);
+    }
+    if (args.id) {
+        parts.push('id=' + args.id);
+    }
+    return parts.join(' ');
+}
+
 exports.execute = function(session, call, callback) {
     var args = normalizeArguments(call);
+    var summary = summarizeToolArgs(args);
+    diagnostics.record('tool_call', call.name + (summary ? ' ' + summary : ''));
+    var outerCallback = callback;
+    callback = function(result) {
+        if (result && result.error) {
+            diagnostics.record('tool_result', call.name + ' error: ' + result.error);
+        } else {
+            diagnostics.record('tool_result', call.name + ' ok' + (result && result.warning ? ' (with warning)' : ''));
+        }
+        outerCallback(result);
+    };
+    try {
+        executeCall(session, call, args, callback);
+    } catch (e) {
+        diagnostics.record('exception', 'watch_tools.execute ' + call.name + ': ' + (e && e.message ? e.message : e));
+        throw e;
+    }
+}
+
+function executeCall(session, call, args, callback) {
     switch (call.name) {
     case 'set_alarm':
         executeSetAlarm(session, args, callback);

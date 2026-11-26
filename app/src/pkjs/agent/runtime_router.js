@@ -17,6 +17,7 @@
 var config = require('../config');
 var CompanionlessRuntime = require('./companionless').CompanionlessRuntime;
 var watchTools = require('./watch_tools');
+var diagnostics = require('./diagnostics');
 
 var COMPANION_SEEN_KEY = 'androidCompanionSeenAt';
 var COMPANION_CLAIM_PREFIX = 'androidCompanionClaimed:';
@@ -97,10 +98,13 @@ exports.run = function(session) {
         return;
     }
     if (exports.shouldStandDown(session)) {
+        diagnostics.record('tools', 'watchTools.shouldExpose=false; stood down to Android companion');
         console.log('Android companion claimed this request; JS phone runtime is standing down.');
         return;
     }
     var runtime = exports.selectRuntime(session.prompt, session.threadId);
+    diagnostics.record('tools', 'watchTools.shouldExpose=' + watchTools.shouldExpose(session.prompt || '') +
+        '; selected runtime=' + runtime);
     console.log('Selected assistant runtime: ' + runtime);
     if (runtime === config.RUNTIME_ANDROID) {
         console.log('Android companion runtime selected; JS phone runtime is standing down.');

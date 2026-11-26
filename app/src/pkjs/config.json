@@ -554,6 +554,32 @@
     ]
   },
   {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Diagnostics"
+      },
+      {
+        "type": "text",
+        "defaultValue": "Recent session events recorded on this phone: prompts, tool decisions, watch replies and errors. Stored only in the local diagnostics log; nothing is sent anywhere. If something goes wrong, copy the text below into a bug report."
+      },
+      {
+        "type": "text",
+        "id": "DIAGNOSTICS_TEXT",
+        "defaultValue": "No diagnostics recorded yet."
+      },
+      {
+        "type": "toggle",
+        "id": "CLEAR_DIAGNOSTICS",
+        "messageKey": "CLEAR_DIAGNOSTICS",
+        "label": "Clear diagnostics log",
+        "description": "Turn this on and tap Save to erase the recorded diagnostics events.",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
     "type": "submit",
     "defaultValue": "Save"
   }

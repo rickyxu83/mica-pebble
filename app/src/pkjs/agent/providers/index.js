@@ -9,6 +9,7 @@
 
 var config = require('../../config');
 var gemini = require('../gemini');
+var diagnostics = require('../diagnostics');
 
 var PROVIDERS = {
     gemini: function() { return gemini; },
@@ -27,7 +28,15 @@ exports.generate = function(input, options, callback) {
     if (config.getProvider() !== 'gemini') {
         options.enableSearchGrounding = false;
     }
-    currentProvider().generate(input, options, callback);
+    var providerId = config.getProvider();
+    currentProvider().generate(input, options, function(err, response) {
+        if (err) {
+            diagnostics.record('provider_error', providerId +
+                (err.status ? ' HTTP ' + err.status + ': ' : ': ') +
+                (err.message || String(err)));
+        }
+        callback(err, response);
+    });
 };
 
 exports.currentProviderName = function() {

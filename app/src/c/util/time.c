@@ -50,6 +50,9 @@ void format_datetime(char *buffer, size_t size, time_t time) {
     strftime(buffer, size, "%a, %b %d, ", timeinfo);
   }
   time_pointer += strlen(buffer);
-  size_t remaining_buffer = sizeof(buffer) - (time_pointer - buffer);
+  // buffer is a char* parameter, so sizeof(buffer) is the pointer size,
+  // not the caller's buffer size; using it here underflowed the remaining
+  // size to a huge value and made the write below effectively unbounded.
+  size_t remaining_buffer = size - (time_pointer - buffer);
   format_time_ampm(time_pointer, remaining_buffer, timeinfo);
 }

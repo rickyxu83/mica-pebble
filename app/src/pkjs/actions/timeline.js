@@ -17,6 +17,8 @@
 // The timeline public URL root
 var API_URL_ROOT = 'https://timeline-api.rebble.io/';
 
+var diagnostics = require('../agent/diagnostics');
+
 function timelineRequest(pin, type, topics, apiKey, callback) {
     // User or shared?
     var url = API_URL_ROOT + 'v1/' + ((topics != null) ? 'shared/' : 'user/') + 'pins/' + pin.id;
@@ -25,9 +27,13 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
     var xhr = new XMLHttpRequest();
     xhr.onload = function () {
         console.log('timeline: response received: ' + this.responseText);
+        diagnostics.record('timeline', type + ' pin ' + pin.id + ' at ' + pin.time + ' -> HTTP ' + this.status);
         if (callback) {
             callback(this.responseText);
         }
+    };
+    xhr.onerror = function () {
+        diagnostics.record('timeline', type + ' pin ' + pin.id + ' network error');
     };
     xhr.open(type, url);
 
@@ -46,7 +52,10 @@ function timelineRequest(pin, type, topics, apiKey, callback) {
         // Send
         xhr.send(JSON.stringify(pin));
         console.log('timeline: request sent.');
-    }, function(error) { console.log('timeline: error getting timeline token: ' + error); });
+    }, function(error) {
+        console.log('timeline: error getting timeline token: ' + error);
+        diagnostics.record('timeline', type + ' pin ' + pin.id + ' failed: could not get timeline token: ' + error);
+    });
 }
 
 // Insert a pin into the timeline

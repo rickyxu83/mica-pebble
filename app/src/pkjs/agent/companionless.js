@@ -23,6 +23,7 @@ var promptBuilder = require('./prompt');
 var usage = require('./usage');
 var watchTools = require('./watch_tools');
 var uiTools = require('./ui_tools');
+var diagnostics = require('./diagnostics');
 
 function CompanionlessRuntime(session) {
     this.session = session;
@@ -39,9 +40,12 @@ function runCompanionlessModel(session) {
     // Watch tools are local and safe; expose them in every language so the
     // model can act instead of lecturing (the old English-only gate broke CJK).
     tools = tools.concat(watchTools.getDeclarations());
-    if (profileTools.shouldExpose(session.prompt)) {
+    var profileExposed = profileTools.shouldExpose(session.prompt);
+    if (profileExposed) {
         tools = tools.concat(profileTools.getDeclarations());
     }
+    diagnostics.record('tools', 'companionless offered tool groups: ui + watch (always)' +
+        (profileExposed ? ' + profile' : '') + '; declarations=' + tools.length);
     var progress = startProgress(session, searchGrounding, tools && tools.length > 0);
     runModelLoop(session, threadId, [{
         type: 'user_input',
@@ -64,6 +68,7 @@ function runModelLoop(session, threadId, history, iteration, progress, searchGro
         }
         if (err) {
             progress.done();
+            diagnostics.record('session_end', 'model loop error: ' + err.message);
             session.handleMessage({data: 'w' + err.message});
             session.handleMessage({data: 'd'});
             session.handleClose({
@@ -97,6 +102,7 @@ function runModelLoop(session, threadId, history, iteration, progress, searchGro
         }
         localHistory.recordTurn(threadId, session.prompt, text);
         progress.done();
+        diagnostics.record('session_end', 'final answer sent (' + text.length + ' chars)');
         streamText(session, text);
         session.handleMessage({data: 'd'});
         session.handleClose({
@@ -164,6 +170,7 @@ function executeFunctionCalls(session, history, calls, callback) {
     var index = 0;
     function next() {
         if (index >= calls.length) {
+            diagnostics.record('tool_done', calls.length + ' tool call(s) executed');
             callback();
             return;
         }

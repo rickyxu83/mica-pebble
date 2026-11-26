@@ -15,6 +15,7 @@
  */
 
 var message_keys = require('message_keys');
+var diagnostics = require('../agent/diagnostics');
 
 function setAlarm(session, message, callback) {
     var time = message['time'];
@@ -43,21 +44,23 @@ function setAlarm(session, message, callback) {
     
     var timeout = setTimeout(function() {
         console.log("Timed out, returning error message.");
+        diagnostics.record('alarm_result', 'timeout after 2000ms waiting for SET_ALARM_RESULT (isTimer=' + isTimer + ', unixTime=' + unixTime + ')');
         callback({"error": "Timed out waiting for a response from the watch."});
         cleanup();
     }, 2000);
-    
+
     var cleanup = function() {
         console.log("Cleaning up alarm handling.");
         Pebble.removeEventListener('appmessage', handleMessage);
         clearTimeout(timeout);
     }
-    
+
     // We need to temporarily hook up to the appmessage system so we can pick up our response.
     var handleMessage = function(event) {
         var data = event.payload;
         if ('SET_ALARM_RESULT' in data) {
             var result = data['SET_ALARM_RESULT'];
+            diagnostics.record('alarm_result', 'SET_ALARM_RESULT code=' + result + ' (isTimer=' + isTimer + ', unixTime=' + unixTime + ')');
             console.log("Got an alarm response: " + result);
             switch (result) {
             case 0: // S_SUCCESS
@@ -116,6 +119,7 @@ function getAlarm(session, message, callback) {
 
     var timeout = setTimeout(function() {
         console.log("Timed out, returning error message.");
+        diagnostics.record('alarm_result', 'get_alarm timeout after 2000ms (isTimer=' + isTimer + ')');
         callback({"error": "Timed out waiting for a response from the watch."});
         cleanup();
     }, 2000);

@@ -98,6 +98,20 @@ module.exports = function(minified) {
             });
         }
 
+        // Fill the Diagnostics section with the current log, passed from
+        // pkjs through Clay's userData channel (see index.js).
+        var diagnosticsText = clayConfig.getItemById('DIAGNOSTICS_TEXT');
+        var diagnosticsReport = clayConfig.meta && clayConfig.meta.userData &&
+            clayConfig.meta.userData.diagnosticsReport;
+        if (diagnosticsText && diagnosticsReport) {
+            var escapedReport = String(diagnosticsReport)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            diagnosticsText.set('<span style="font-family: monospace; font-size: 11px;">' +
+                escapedReport.replace(/\n/g, '<br>') + '</span>');
+        }
+
         applyTemplate();
         updateVisibility();
         provider.on('change', updateVisibility);

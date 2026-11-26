@@ -15,22 +15,27 @@
  */
 
 var reminders = require('../lib/reminders');
+var diagnostics = require('../agent/diagnostics');
 
 exports.setReminder = function(session, message, callback) {
   var when = message['time'];
   var what = message['what'];
-  
+  diagnostics.record('reminder', 'set_reminder requested: "' + String(what).substring(0, 60) + '" at ' + when);
+
   try {
     reminders.addReminder(what, when);
     var unixTime = (new Date(when)).getTime() / 1000;
     session.enqueue({ACTION_REMINDER_WAS_SET: unixTime});
-    
+
     if (unixTime < (new Date()).getTime() / 1000 + 3600) {
+      diagnostics.record('reminder_result', 'set_reminder ok for ' + when + ' (near-future warning)');
       callback({"warning": "Your reminder was set. It is **critical** you warn the user: Due to timeline delays, reminders set in the near future may not appear on time."});
     } else {
+      diagnostics.record('reminder_result', 'set_reminder ok for ' + when);
       callback({"status": "ok"});
     }
   } catch (err) {
+    diagnostics.record('reminder_result', 'set_reminder error: ' + err.message);
     callback({"error": "Failed to set reminder: " + err.message});
   }
 };
@@ -59,12 +64,14 @@ exports.deleteReminder = function(session, message, callback) {
   
   try {
     var success = reminders.deleteReminder(reminderId);
+    diagnostics.record('reminder_result', 'delete_reminder id=' + reminderId + ' found=' + success);
     if (!success) {
       callback({"error": "Reminder not found"});
     }
     session.enqueue({ACTION_REMINDER_DELETED: 1});
     callback({"status": "ok"});
   } catch (err) {
+    diagnostics.record('reminder_result', 'delete_reminder error: ' + err.message);
     callback({"error": "Failed to delete reminder: " + err.message});
   }
 };

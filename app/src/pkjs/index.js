@@ -26,9 +26,45 @@ var reminders = require('./reminders');
 var feedback = require('./lib/feedback');
 var package_json = require('package.json');
 var runtimeRouter = require('./agent/runtime_router');
+var diagnostics = require('./agent/diagnostics');
 
 
-var clay = new Clay(clayConfig, customConfigFunction);
+// The diagnostics report reaches the settings page through Clay's userData
+// channel: Clay re-reads it every time the page is generated, so refreshing
+// the object before Clay's own showConfiguration handler runs (this
+// listener is registered first) keeps the page current. The report itself
+// never becomes a setting, so it is never sent to the watch.
+var diagnosticsUserData = {diagnosticsReport: 'No diagnostics recorded yet.'};
+
+function refreshDiagnosticsReport() {
+    try {
+        diagnosticsUserData.diagnosticsReport = diagnostics.formatReport();
+    } catch (e) {
+        // Diagnostics must never break the app.
+    }
+}
+
+Pebble.addEventListener('showConfiguration', refreshDiagnosticsReport);
+
+var clay = new Clay(clayConfig, customConfigFunction, {userData: diagnosticsUserData});
+
+// Registered after Clay's own webviewclosed handler, so Clay has already
+// saved the settings to localStorage when this runs.
+Pebble.addEventListener('webviewclosed', function(e) {
+    if (!e || !e.response) {
+        return;
+    }
+    try {
+        if (config.getSetting('CLEAR_DIAGNOSTICS', false)) {
+            diagnostics.clear();
+            config.setSetting('CLEAR_DIAGNOSTICS', false);
+            diagnostics.record('diagnostics', 'log cleared from settings');
+            refreshDiagnosticsReport();
+        }
+    } catch (err) {
+        // Diagnostics must never break the app.
+    }
+});
 
 function main() {
     location.update();
@@ -57,6 +93,15 @@ function runAiTest() {
 }
 
 function handleAppMessage(e) {
+    try {
+        handleAppMessageInner(e);
+    } catch (err) {
+        diagnostics.record('exception', 'handleAppMessage: ' + (err && err.message ? err.message : err));
+        throw err;
+    }
+}
+
+function handleAppMessageInner(e) {
     console.log("Inbound app message!");
     console.log(JSON.stringify(e));
     var data = e.payload;
@@ -70,6 +115,8 @@ function handleAppMessage(e) {
     }
     if (data.PROMPT) {
         console.log("Starting a new Session...");
+        diagnostics.record('session_start', 'thread=' + (data.THREAD_ID || 'new'));
+        diagnostics.record('prompt', String(data.PROMPT).substring(0, 200));
         var s = new session.Session(data.PROMPT, data.THREAD_ID, data.ANDROID_REQUEST_ID);
         s.run();
         return;
