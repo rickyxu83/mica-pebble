@@ -24,15 +24,14 @@ void mica_animate_window_pop(Window *window);
 // Registrations outside a mica_animate_window_push are ignored.
 void mica_transition_register_lead_layer(Layer *layer);
 
-// The settle curve itself, for reuse by other animations.
-// progress is ANIMATION_NORMALIZED_MIN..MAX; the eased result may exceed
+// The settle curves themselves, as AnimationCurveFunction callbacks for
+// animation_set_curve(AnimationCurveCustomFunction) +
+// animation_set_custom_curve(): standard settle (~4% overshoot) and
+// strong settle (~9% overshoot, used for the leading logo). progress is
+// ANIMATION_NORMALIZED_MIN..MAX; the eased result may exceed
 // ANIMATION_NORMALIZED_MAX mid-flight (that is the overshoot).
 int32_t mica_curve_settle(int32_t progress);
-// InterpolateInt64Function implementations for
-// animation_set_custom_interpolation: standard settle (~4% overshoot)
-// and strong settle (~9% overshoot, used for the leading logo).
-int64_t mica_interpolate_settle(int32_t progress, int64_t from, int64_t to);
-int64_t mica_interpolate_settle_strong(int32_t progress, int64_t from, int64_t to);
+int32_t mica_curve_settle_strong(int32_t progress);
 
 void mica_page_apply_background(Window *window);
 void mica_page_apply_background_colored(Window *window, GColor background);

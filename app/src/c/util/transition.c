@@ -64,18 +64,14 @@ static int64_t prv_settle_apply(int32_t progress, int64_t from, int64_t to,
   return from + (to - from) * f / SETTLE_Q;
 }
 
-int64_t mica_interpolate_settle(int32_t progress, int64_t from, int64_t to) {
-  return prv_settle_apply(progress, from, to, SETTLE_STRENGTH_STANDARD);
-}
-
-int64_t mica_interpolate_settle_strong(int32_t progress, int64_t from,
-    int64_t to) {
-  return prv_settle_apply(progress, from, to, SETTLE_STRENGTH_STRONG);
-}
-
 int32_t mica_curve_settle(int32_t progress) {
   return (int32_t)prv_settle_apply(progress, 0, ANIMATION_NORMALIZED_MAX,
       SETTLE_STRENGTH_STANDARD);
+}
+
+int32_t mica_curve_settle_strong(int32_t progress) {
+  return (int32_t)prv_settle_apply(progress, 0, ANIMATION_NORMALIZED_MAX,
+      SETTLE_STRENGTH_STRONG);
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +175,7 @@ void mica_animate_window_push_colored(Window *window, GColor background) {
   window_stack_push(window, false);
 
   Layer *root = window_get_root_layer(window);
-  const GRect target = layer_get_frame(root);
+  GRect target = layer_get_frame(root);
   GRect from = target;
   from.origin.x += target.size.w;
   layer_set_frame(root, from);
@@ -192,7 +188,8 @@ void mica_animate_window_push_colored(Window *window, GColor background) {
       &target);
   Animation *animation = property_animation_get_animation(transition->root_pa);
   animation_set_duration(animation, MICA_ENTER_MS);
-  animation_set_custom_interpolation(animation, mica_interpolate_settle);
+  animation_set_curve(animation, AnimationCurveCustomFunction);
+  animation_set_custom_curve(animation, mica_curve_settle);
   animation_set_handlers(animation, (AnimationHandlers) {
     .stopped = prv_transition_stopped,
   }, transition);
@@ -213,8 +210,8 @@ void mica_animate_window_push_colored(Window *window, GColor background) {
     Animation *lead_animation =
         property_animation_get_animation(transition->lead_pa);
     animation_set_duration(lead_animation, MICA_ENTER_MS);
-    animation_set_custom_interpolation(lead_animation,
-        mica_interpolate_settle_strong);
+    animation_set_curve(lead_animation, AnimationCurveCustomFunction);
+    animation_set_custom_curve(lead_animation, mica_curve_settle_strong);
     animation_set_handlers(lead_animation, (AnimationHandlers) {
       .stopped = prv_transition_stopped,
     }, transition);
@@ -238,7 +235,7 @@ void mica_animate_window_pop(Window *window) {
   }
   prv_finish_active();
   Layer *root = window_get_root_layer(window);
-  const GRect target = layer_get_frame(root);
+  GRect target = layer_get_frame(root);
   GRect to = target;
   to.origin.x += target.size.w;
 
