@@ -580,7 +580,7 @@ function parseError(status, responseText, model) {
     message = message || 'unknown error';
     var lowerMessage = message.toLowerCase();
     if (status === 403 && lowerMessage.indexOf('generativelanguage.googleapis.com') !== -1 && lowerMessage.indexOf('blocked') !== -1) {
-        message = 'Gemini API key is blocked. Enable the Gemini API and allow generativelanguage.googleapis.com. For companionless mode, do not restrict the key to the upstream Billy Companion package/SHA.';
+        message = 'Gemini API key is blocked. Enable the Gemini API and allow generativelanguage.googleapis.com. For companionless mode, do not restrict the key to the Android companion app package/SHA.';
     }
     if ((status === 401 || status === 403) && lowerMessage.indexOf('invalid authentication credentials') !== -1) {
         message = 'Gemini did not accept this value as an API key. Use a Gemini API key from Google AI Studio, not an OAuth client ID, client secret, or access token.';

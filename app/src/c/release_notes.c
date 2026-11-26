@@ -21,6 +21,7 @@
 #include "util/logging.h"
 #include "util/memory/malloc.h"
 #include "util/memory/sdk.h"
+#include "util/transition.h"
 #include "version/version.h"
 
 typedef struct {
@@ -31,6 +32,7 @@ typedef struct {
 } ReleaseNotesWindowData;
 
 static void prv_load(Window *window);
+static void prv_appear(Window *window);
 static void prv_unload(Window *window);
 // static void prv_click_config_provider(void *context);
 static char* prv_create_release_notes();
@@ -42,9 +44,14 @@ void prv_release_notes_push() {
   window_set_user_data(window, data);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = prv_load,
+    .appear = prv_appear,
     .unload = prv_unload,
   });
-  window_stack_push(window, true);
+  window_stack_push(window, false);
+}
+
+static void prv_appear(Window *window) {
+  mica_animate_window_push(window);
 }
 
 void release_notes_maybe_push() {

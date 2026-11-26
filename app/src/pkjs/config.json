@@ -208,7 +208,7 @@
         "id": "FEEDBACK_POST_URL",
         "messageKey": "FEEDBACK_POST_URL",
         "label": "反馈接收端点（高级）",
-        "description": "Optional. Bobby-style feedback posts JSON here and returns Sent/Error on the watch. Leave blank to open a prefilled GitHub issue instead.",
+        "description": "Optional. Feedback posts JSON here and returns Sent/Error on the watch. Leave blank to open a prefilled GitHub issue instead.",
         "defaultValue": ""
       },
       {
