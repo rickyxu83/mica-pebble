@@ -21,7 +21,7 @@
 
 // These are recommendations - it will scale to any size.
 #define THINKING_LAYER_WIDTH 48
-#define THINKING_LAYER_HEIGHT 15
+#define THINKING_LAYER_HEIGHT 24
 
 typedef Layer ThinkingLayer;
 

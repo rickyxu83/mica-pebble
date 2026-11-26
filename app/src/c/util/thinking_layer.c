@@ -195,10 +195,10 @@ static void prv_layer_render(Layer* layer, GContext* ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_fill_color(ctx, COLOR_FALLBACK(mica_theme_deep_accent(), GColorBlack));
   const int slot_w = bounds.size.w / BAR_COUNT;
-  const int bar_w = slot_w / 2;
-  const int min_h = bounds.size.h / 3;
+  const int bar_w = slot_w / 3;
+  const int min_h = 4;
   const int max_h = bounds.size.h;
-  const int center_y = bounds.origin.y + bounds.size.h / 2;
+  const int bottom_y = bounds.origin.y + bounds.size.h;
   for (int i = 0; i < BAR_COUNT; ++i) {
     uint32_t angle = (uint32_t)(((uint64_t)data->progress * TRIG_MAX_ANGLE /
         ANIMATION_NORMALIZED_MAX) + (uint64_t)i * (TRIG_MAX_ANGLE / BAR_COUNT)) % TRIG_MAX_ANGLE;
@@ -207,6 +207,9 @@ static void prv_layer_render(Layer* layer, GContext* ctx) {
         (2 * TRIG_MAX_RATIO));
     height = (int)((int32_t)height * (int32_t)data->reveal / (int32_t)ANIMATION_NORMALIZED_MAX);
     int center_x = bounds.origin.x + i * slot_w + slot_w / 2;
-    prv_draw_bar(ctx, center_x, center_y, bar_w, height);
+    // Bottom-anchored like an equaliser (and like the logo's bars): the
+    // bars grow up from a shared baseline, which reads as a waveform
+    // rather than as bouncing dots.
+    prv_draw_bar(ctx, center_x, bottom_y - height / 2, bar_w, height);
   }
 }
