@@ -52,8 +52,11 @@ struct RootWindow {
   int16_t mascot_base_y;
   uint32_t mascot_phase_ms;
   AppTimer* expression_timer;
-  uint8_t expression_cycles;
-  uint16_t expression_shown_ms;
+  uint8_t expression_phase;
+  uint16_t expression_intro_progress;
+  uint8_t expression_slot;
+  uint16_t expression_slot_elapsed_ms;
+  bool expression_slot_released;
   EventHandle event_handle;
   EventHandle app_message_handle;
   bool touch_subscribed;
@@ -79,8 +82,7 @@ static int prv_load_suggestions(char*** suggestions);
 static void prv_app_message_handler(DictionaryIterator *iter, void *context);
 static void prv_send_watch_ready(void);
 static void prv_mascot_breath_tick(void *context);
-static void prv_expression_tick(void *context);
-static void prv_expression_restore(void *context);
+static void prv_expression_timer(void *context);
 static void prv_touch_event_handler(const TouchEvent *event, void *context);
 
 RootWindow* root_window_create() {
@@ -112,10 +114,43 @@ Window* root_window_get_window(RootWindow* window) {
 #define ROOT_TOUCH_TAP_MAX_MS 300
 #define ROOT_TOUCH_TAP_MAX_DISTANCE_PX 10
 
-#define EXPRESSION_PERIOD_MS 3000
-#define EXPRESSION_BLINK_MS 150
-#define EXPRESSION_HAPPY_MS 700
-#define EXPRESSION_HAPPY_EVERY 4
+#define EXPRESSION_INTRO_TICK_MS 30
+#define EXPRESSION_INTRO_DURATION_MS 700
+#define EXPRESSION_TICK_MS 100
+#define EXPRESSION_SLOT_MS 2000
+#define EXPRESSION_BLINK_CLOSE_MS 150
+#define EXPRESSION_WINK_CLOSE_MS 800
+
+// The idle rotation: one EXPRESSION_SLOT_MS slot per entry, looping.
+// A blink slot closes the eyes for EXPRESSION_BLINK_CLOSE_MS at the
+// slot's start and then reopens — the eyes are never held shut for a
+// whole slot; the acts animate or hold for their full slot.
+enum {
+  EXPR_SLOT_REST = 0,
+  EXPR_SLOT_BLINK,
+  EXPR_SLOT_HAPPY,
+  EXPR_SLOT_WINK,
+  EXPR_SLOT_LOOK_AROUND,
+  EXPR_SLOT_HEARTS,
+  EXPR_SLOT_SLEEPY,
+  EXPR_SLOT_COOL,
+  EXPR_SLOT_FLOWER,
+  EXPR_SLOT_MUSIC
+};
+
+static const uint8_t s_expression_rotation[] = {
+    EXPR_SLOT_REST, EXPR_SLOT_BLINK, EXPR_SLOT_REST, EXPR_SLOT_HAPPY,
+    EXPR_SLOT_BLINK, EXPR_SLOT_WINK, EXPR_SLOT_LOOK_AROUND,
+    EXPR_SLOT_HEARTS, EXPR_SLOT_BLINK, EXPR_SLOT_SLEEPY,
+    EXPR_SLOT_COOL, EXPR_SLOT_FLOWER, EXPR_SLOT_MUSIC
+};
+#define EXPRESSION_ROTATION_COUNT \
+  (sizeof(s_expression_rotation) / sizeof(s_expression_rotation[0]))
+
+enum {
+  EXPR_PHASE_INTRO = 0,
+  EXPR_PHASE_SLOTS
+};
 
 static uint64_t prv_now_ms(void) {
   time_t seconds;
@@ -227,8 +262,8 @@ static void prv_window_appear(Window* window) {
   // DOT + OMEGA (style 2). The idle expression state machine below
   // drives the rest.
   rw->mascot_layer = face_layer_create(GRect((content_width - 64) / 2, rw->mascot_base_y, 64, 64));
-  face_layer_set_expression(rw->mascot_layer, FaceEyeDot,
-      FaceMouthOmega, 0, 0, 0);
+  face_layer_set_expression(rw->mascot_layer, FaceEyeDot, FaceEyeDot,
+      FaceMouthOmega, 0, 0, 0, FacePropNone);
   layer_add_child(window_get_root_layer(rw->window), face_layer_get_layer(rw->mascot_layer));
   // On the entrance push the mascot leads the page slide (see
   // util/transition.c); registrations outside a push are ignored.
@@ -272,47 +307,153 @@ static void prv_window_appear(Window* window) {
     touch_service_subscribe(prv_touch_event_handler, rw);
     rw->touch_subscribed = true;
   }
-  // Idle breathing starts only once the entrance choreography has
-  // settled (280 ms slide + 50 ms logo lead), so the two never fight
-  // over the mascot's frame. prv_window_disappear cancels the timer, so
-  // any navigation stops the breathing instantly.
+  // Idle performance: on every appear the mascot starts as the
+  // launcher icon's three bars and morphs into the face (driven by
+  // prv_expression_timer below), then steps the 2 s expression
+  // rotation. Breathing starts when the morph completes, so the two
+  // never fight over the mascot's frame; prv_window_disappear cancels
+  // both timers, so any navigation stops everything instantly.
   rw->mascot_phase_ms = 0;
-  rw->mascot_timer = app_timer_register(350, prv_mascot_breath_tick, rw);
-  rw->expression_cycles = 0;
-  rw->expression_timer = app_timer_register(EXPRESSION_PERIOD_MS,
-      prv_expression_tick, rw);
+  rw->expression_phase = EXPR_PHASE_INTRO;
+  rw->expression_intro_progress = 0;
+  rw->expression_slot = 0;
+  rw->expression_slot_elapsed_ms = 0;
+  rw->expression_slot_released = false;
+  face_layer_set_intro_progress(rw->mascot_layer, 0);
+  rw->expression_timer = app_timer_register(EXPRESSION_INTRO_TICK_MS,
+      prv_expression_timer, rw);
   BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Window appeared. Heap usage increased %d bytes", heap_size - heap_bytes_free());
 }
 
-// Idle expressions for the mascot face: a ~3 s cycle that is a 150 ms
-// blink, except every fourth cycle, which is a 700 ms happy flash
-// (^^ eyes) instead. One timer alternates between the tick
-// (idle -> expression) and restore (expression -> idle) callbacks, so
-// exactly one expression timer is ever pending; prv_window_disappear
-// cancels whichever is outstanding.
-static void prv_expression_tick(void *context) {
-  RootWindow *rw = context;
-  rw->expression_cycles++;
-  if (rw->expression_cycles % EXPRESSION_HAPPY_EVERY == 0) {
-    face_layer_set_expression(rw->mascot_layer, FaceEyeHappy,
-        FaceMouthOmega, 0, 0, 0);
-    rw->expression_shown_ms = EXPRESSION_HAPPY_MS;
-  } else {
-    face_layer_set_expression(rw->mascot_layer, FaceEyeBlink,
-        FaceMouthOmega, 0, 0, 0);
-    rw->expression_shown_ms = EXPRESSION_BLINK_MS;
-  }
-  rw->expression_timer = app_timer_register(rw->expression_shown_ms,
-      prv_expression_restore, rw);
+static void prv_expression_set_rest(RootWindow *rw) {
+  face_layer_set_expression(rw->mascot_layer, FaceEyeDot, FaceEyeDot,
+      FaceMouthOmega, 0, 0, 0, FacePropNone);
 }
 
-static void prv_expression_restore(void *context) {
+// Applies the frame for the current rotation slot at the given
+// elapsed time within the slot. Static slots simply (re)assert their
+// expression; blink and wink release back to rest partway through,
+// and look-around / sleepy animate on every call.
+static void prv_expression_apply_slot(RootWindow *rw, uint16_t elapsed_ms) {
+  switch (s_expression_rotation[rw->expression_slot]) {
+    case EXPR_SLOT_BLINK:
+      if (elapsed_ms < EXPRESSION_BLINK_CLOSE_MS) {
+        face_layer_set_expression(rw->mascot_layer, FaceEyeBlink,
+            FaceEyeBlink, FaceMouthOmega, 0, 0, 0, FacePropNone);
+      } else if (!rw->expression_slot_released) {
+        rw->expression_slot_released = true;
+        prv_expression_set_rest(rw);
+      }
+      break;
+    case EXPR_SLOT_HAPPY:
+      face_layer_set_expression(rw->mascot_layer, FaceEyeHappy,
+          FaceEyeHappy, FaceMouthOmega, 0, 0, 0, FacePropNone);
+      break;
+    case EXPR_SLOT_WINK:
+      if (elapsed_ms < EXPRESSION_WINK_CLOSE_MS) {
+        face_layer_set_expression(rw->mascot_layer, FaceEyeBlink,
+            FaceEyeDot, FaceMouthOmega, 0, 0, 0, FacePropNone);
+      } else if (!rw->expression_slot_released) {
+        rw->expression_slot_released = true;
+        prv_expression_set_rest(rw);
+      }
+      break;
+    case EXPR_SLOT_LOOK_AROUND: {
+      // Sweep the gaze -4 -> +4 -> 0 across the slot.
+      const uint16_t half = EXPRESSION_SLOT_MS / 2;
+      int16_t look_x;
+      if (elapsed_ms < half) {
+        look_x = (int16_t)(-4 + 8 * (int32_t)elapsed_ms / half);
+      } else {
+        look_x = (int16_t)(4 - 4 * (int32_t)(elapsed_ms - half) / half);
+      }
+      face_layer_set_expression(rw->mascot_layer, FaceEyeSmall,
+          FaceEyeSmall, FaceMouthOmega, look_x, 0, 0, FacePropNone);
+      break;
+    }
+    case EXPR_SLOT_HEARTS:
+      face_layer_set_expression(rw->mascot_layer, FaceEyeHeart,
+          FaceEyeHeart, FaceMouthOmega, 0, 0, 0, FacePropNone);
+      break;
+    case EXPR_SLOT_SLEEPY:
+      // wave_phase carries the slot's elapsed ms so the Zs drift.
+      face_layer_set_expression(rw->mascot_layer, FaceEyeSleepy,
+          FaceEyeSleepy, FaceMouthFlat, 0, 0, elapsed_ms, FacePropZzz);
+      break;
+    case EXPR_SLOT_COOL:
+      face_layer_set_expression(rw->mascot_layer, FaceEyeDot, FaceEyeDot,
+          FaceMouthOmega, 0, 0, 0, FacePropSunglasses);
+      break;
+    case EXPR_SLOT_FLOWER:
+      face_layer_set_expression(rw->mascot_layer, FaceEyeHappy,
+          FaceEyeHappy, FaceMouthOmega, 0, 0, 0, FacePropFlower);
+      break;
+    case EXPR_SLOT_MUSIC:
+      face_layer_set_expression(rw->mascot_layer, FaceEyeHappy,
+          FaceEyeHappy, FaceMouthOmega, 0, 0, 0, FacePropMusicNote);
+      break;
+    default:  // EXPR_SLOT_REST
+      prv_expression_set_rest(rw);
+      break;
+  }
+}
+
+// One chained timer drives the whole idle performance: 30 ms ticks
+// run the bars -> face intro morph, then 100 ms ticks step the 2 s
+// slot rotation. Exactly one expression timer is ever outstanding;
+// prv_window_disappear cancels it before the face is destroyed.
+static void prv_expression_timer(void *context) {
   RootWindow *rw = context;
-  face_layer_set_expression(rw->mascot_layer, FaceEyeDot,
-      FaceMouthOmega, 0, 0, 0);
-  rw->expression_timer = app_timer_register(
-      EXPRESSION_PERIOD_MS - rw->expression_shown_ms,
-      prv_expression_tick, rw);
+  rw->expression_timer = NULL;
+  if (rw->expression_phase == EXPR_PHASE_INTRO) {
+    rw->expression_intro_progress +=
+        1000 * EXPRESSION_INTRO_TICK_MS / EXPRESSION_INTRO_DURATION_MS;
+    if (rw->expression_intro_progress >= 1000) {
+      rw->expression_intro_progress = 1000;
+      face_layer_set_intro_progress(rw->mascot_layer, 1000);
+      rw->expression_phase = EXPR_PHASE_SLOTS;
+      rw->expression_slot = 0;
+      rw->expression_slot_elapsed_ms = 0;
+      rw->expression_slot_released = false;
+      prv_expression_apply_slot(rw, 0);
+      // The morph has settled; idle breathing starts now.
+      rw->mascot_phase_ms = 0;
+      rw->mascot_timer = app_timer_register(50, prv_mascot_breath_tick, rw);
+      rw->expression_timer = app_timer_register(EXPRESSION_TICK_MS,
+          prv_expression_timer, rw);
+    } else {
+      face_layer_set_intro_progress(rw->mascot_layer,
+          rw->expression_intro_progress);
+      rw->expression_timer = app_timer_register(EXPRESSION_INTRO_TICK_MS,
+          prv_expression_timer, rw);
+    }
+    return;
+  }
+  const uint16_t prev_elapsed = rw->expression_slot_elapsed_ms;
+  rw->expression_slot_elapsed_ms += EXPRESSION_TICK_MS;
+  if (rw->expression_slot_elapsed_ms >= EXPRESSION_SLOT_MS) {
+    rw->expression_slot =
+        (rw->expression_slot + 1) % EXPRESSION_ROTATION_COUNT;
+    rw->expression_slot_elapsed_ms = 0;
+    rw->expression_slot_released = false;
+    prv_expression_apply_slot(rw, 0);
+  } else {
+    // Mid-slot updates only where the frame actually changes: the
+    // animated acts, and the moment a blink/wink releases.
+    const uint8_t kind = s_expression_rotation[rw->expression_slot];
+    const uint16_t elapsed = rw->expression_slot_elapsed_ms;
+    if (kind == EXPR_SLOT_LOOK_AROUND || kind == EXPR_SLOT_SLEEPY ||
+        (kind == EXPR_SLOT_BLINK &&
+            prev_elapsed < EXPRESSION_BLINK_CLOSE_MS &&
+            elapsed >= EXPRESSION_BLINK_CLOSE_MS) ||
+        (kind == EXPR_SLOT_WINK &&
+            prev_elapsed < EXPRESSION_WINK_CLOSE_MS &&
+            elapsed >= EXPRESSION_WINK_CLOSE_MS)) {
+      prv_expression_apply_slot(rw, elapsed);
+    }
+  }
+  rw->expression_timer = app_timer_register(EXPRESSION_TICK_MS,
+      prv_expression_timer, rw);
 }
 
 // The mascot gently bobs ±2 px on a ~2400 ms sine loop while the home

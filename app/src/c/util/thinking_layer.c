@@ -74,7 +74,8 @@ ThinkingLayer* thinking_layer_create(GRect rect) {
   // The face starts at zero size in the centre; the reveal animation
   // grows it to the full frame (see prv_apply_reveal).
   data->face = face_layer_create(GRect(rect.size.w / 2, rect.size.h / 2, 0, 0));
-  face_layer_set_expression(data->face, FaceEyeSmall, FaceMouthWave, 0, 0, 0);
+  face_layer_set_expression(data->face, FaceEyeSmall, FaceEyeSmall,
+      FaceMouthWave, 0, 0, 0, FacePropNone);
   layer_add_child(layer, face_layer_get_layer(data->face));
   data->animation = animation_create();
   animation_set_curve(data->animation, AnimationCurveLinear);
@@ -188,8 +189,8 @@ static void prv_animation_update(Animation* animation, const AnimationProgress p
   const int16_t look_y = (int16_t)(2 *
       sin_lookup((angle * 2) % TRIG_MAX_ANGLE) / TRIG_MAX_RATIO);
   const uint32_t wave_phase = (angle * 2) % TRIG_MAX_ANGLE;
-  face_layer_set_expression(data->face, FaceEyeSmall, FaceMouthWave,
-      look_x, look_y, wave_phase);
+  face_layer_set_expression(data->face, FaceEyeSmall, FaceEyeSmall,
+      FaceMouthWave, look_x, look_y, wave_phase, FacePropNone);
 }
 
 static void prv_reveal_update(Animation* animation, const AnimationProgress progress) {
