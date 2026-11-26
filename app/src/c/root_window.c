@@ -119,14 +119,18 @@ Window* root_window_get_window(RootWindow* window) {
 #define EXPRESSION_INTRO_DELAY_MS 450
 #define EXPRESSION_INTRO_DURATION_MS 900
 #define EXPRESSION_TICK_MS 100
-#define EXPRESSION_SLOT_MS 1000
+#define EXPRESSION_SLOT_MS 2000
+#define EXPRESSION_BLINK_START_MS 900
 #define EXPRESSION_BLINK_CLOSE_MS 150
 #define EXPRESSION_WINK_CLOSE_MS 800
 
 // The idle rotation: one EXPRESSION_SLOT_MS slot per entry, looping.
-// A blink slot closes the eyes for EXPRESSION_BLINK_CLOSE_MS at the
-// slot's start and then reopens — the eyes are never held shut for a
-// whole slot; the acts animate or hold for their full slot.
+// Every entry is a visibly different act — the owner found that
+// blink/rest slots interleaved between acts made consecutive slots
+// feel like "no change", so blinking appears exactly once per cycle:
+// the last slot rests and blinks once mid-slot (eyes closed for
+// EXPRESSION_BLINK_CLOSE_MS starting at EXPRESSION_BLINK_START_MS).
+// The acts animate or hold for their full slot.
 enum {
   EXPR_SLOT_REST = 0,
   EXPR_SLOT_BLINK,
@@ -141,10 +145,9 @@ enum {
 };
 
 static const uint8_t s_expression_rotation[] = {
-    EXPR_SLOT_REST, EXPR_SLOT_BLINK, EXPR_SLOT_REST, EXPR_SLOT_HAPPY,
-    EXPR_SLOT_BLINK, EXPR_SLOT_WINK, EXPR_SLOT_LOOK_AROUND,
-    EXPR_SLOT_HEARTS, EXPR_SLOT_BLINK, EXPR_SLOT_SLEEPY,
-    EXPR_SLOT_COOL, EXPR_SLOT_FLOWER, EXPR_SLOT_MUSIC
+    EXPR_SLOT_HAPPY, EXPR_SLOT_LOOK_AROUND, EXPR_SLOT_HEARTS,
+    EXPR_SLOT_COOL, EXPR_SLOT_FLOWER, EXPR_SLOT_SLEEPY,
+    EXPR_SLOT_MUSIC, EXPR_SLOT_WINK, EXPR_SLOT_BLINK
 };
 #define EXPRESSION_ROTATION_COUNT \
   (sizeof(s_expression_rotation) / sizeof(s_expression_rotation[0]))
@@ -344,11 +347,19 @@ static void prv_expression_set_rest(RootWindow *rw) {
 static void prv_expression_apply_slot(RootWindow *rw, uint16_t elapsed_ms) {
   switch (s_expression_rotation[rw->expression_slot]) {
     case EXPR_SLOT_BLINK:
-      if (elapsed_ms < EXPRESSION_BLINK_CLOSE_MS) {
+      // The cycle's one calm slot: rest, with a single blink in the
+      // middle (closed EXPRESSION_BLINK_START_MS..+CLOSE_MS).
+      if (elapsed_ms >= EXPRESSION_BLINK_START_MS &&
+          elapsed_ms < EXPRESSION_BLINK_START_MS + EXPRESSION_BLINK_CLOSE_MS) {
         face_layer_set_expression(rw->mascot_layer, FaceEyeBlink,
             FaceEyeBlink, FaceMouthOmega, 0, 0, 0, FacePropNone);
-      } else if (!rw->expression_slot_released) {
-        rw->expression_slot_released = true;
+      } else if (elapsed_ms >=
+          EXPRESSION_BLINK_START_MS + EXPRESSION_BLINK_CLOSE_MS) {
+        if (!rw->expression_slot_released) {
+          rw->expression_slot_released = true;
+          prv_expression_set_rest(rw);
+        }
+      } else {
         prv_expression_set_rest(rw);
       }
       break;
@@ -457,8 +468,12 @@ static void prv_expression_timer(void *context) {
     const uint16_t elapsed = rw->expression_slot_elapsed_ms;
     if (kind == EXPR_SLOT_LOOK_AROUND || kind == EXPR_SLOT_SLEEPY ||
         (kind == EXPR_SLOT_BLINK &&
-            prev_elapsed < EXPRESSION_BLINK_CLOSE_MS &&
-            elapsed >= EXPRESSION_BLINK_CLOSE_MS) ||
+            ((prev_elapsed < EXPRESSION_BLINK_START_MS &&
+                elapsed >= EXPRESSION_BLINK_START_MS) ||
+             (prev_elapsed <
+                    EXPRESSION_BLINK_START_MS + EXPRESSION_BLINK_CLOSE_MS &&
+                elapsed >=
+                    EXPRESSION_BLINK_START_MS + EXPRESSION_BLINK_CLOSE_MS))) ||
         (kind == EXPR_SLOT_WINK &&
             prev_elapsed < EXPRESSION_WINK_CLOSE_MS &&
             elapsed >= EXPRESSION_WINK_CLOSE_MS)) {
