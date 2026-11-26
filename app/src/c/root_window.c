@@ -209,9 +209,25 @@ static void prv_touch_event_handler(const TouchEvent *event, void *context) {
       rw->touch_tracking = false;
       if (is_tap) {
         // The home screen has no MenuLayer/ScrollLayer for the firmware
-        // gesture bridge to map this tap onto, so invoke Select's exact
-        // existing handler.
-        prv_prompt_clicked(NULL, rw);
+        // gesture bridge to map this tap onto, so dispatch by position
+        // onto the buttons' exact existing handlers. Taps on the right
+        // action-bar strip hit the icon they land on (the strip is
+        // divided into the Up / Select / Down thirds, matching the
+        // physical buttons); taps anywhere else mean "ask Mica", i.e.
+        // Select. (Before this, every tap - including ones on the help
+        // and more icons - started dictation.)
+        const GRect bounds = layer_get_bounds(window_get_root_layer(rw->window));
+        if (rw->touch_down_x >= bounds.size.w - ACTION_BAR_WIDTH) {
+          if (rw->touch_down_y < bounds.size.h / 3) {
+            prv_up_clicked(NULL, rw);
+          } else if (rw->touch_down_y > (bounds.size.h * 2) / 3) {
+            prv_more_clicked(NULL, rw);
+          } else {
+            prv_prompt_clicked(NULL, rw);
+          }
+        } else {
+          prv_prompt_clicked(NULL, rw);
+        }
       }
       break;
     }
