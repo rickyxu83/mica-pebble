@@ -20,7 +20,7 @@
 // These keys are stored centrally so we can avoid accidental collisions.
 // Remember: these numbers can *never* be changed.
 
-// next key: 20
+// next key: 21
 
 // We write the alarm count twice - once before doing any work, and once after.
 // If they disagree we assume the lower number is correct.
@@ -30,6 +30,8 @@
 #define PERSIST_KEY_ALARM_WAKEUP_IDS 4
 #define PERSIST_KEY_ALARM_IS_TIMERS 5
 #define PERSIST_KEY_ALARM_NAMES 8
+// Weekday repeat bitmask per alarm (bit0 = Monday .. bit6 = Sunday, 0 = one-shot)
+#define PERSIST_KEY_ALARM_REPEATS 20
 
 // Store whether we have successfully requested location consent.
 #define PERSIST_KEY_LOCATION_ENABLED 6

@@ -27,6 +27,7 @@ var quiet = require('./lib/quiet');
 var package_json = require('package.json');
 var runtimeRouter = require('./agent/runtime_router');
 var diagnostics = require('./agent/diagnostics');
+var localActions = require('./agent/local_actions');
 
 
 // The diagnostics report reaches the settings page through Clay's userData
@@ -136,6 +137,12 @@ function handleAppMessageInner(e) {
         return;
     }
     if (data.PROMPT) {
+        // Local intent layer: timers, alarms, find-my-phone, music,
+        // local weather and the health coach are handled on the phone
+        // without an AI round trip when the phrasing matches.
+        if (localActions.tryHandle(data)) {
+            return;
+        }
         console.log("Starting a new Session...");
         diagnostics.record('session_start', 'thread=' + (data.THREAD_ID || 'new'));
         diagnostics.record('prompt', String(data.PROMPT).substring(0, 200));

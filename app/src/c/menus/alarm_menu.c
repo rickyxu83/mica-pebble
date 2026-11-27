@@ -61,6 +61,7 @@ static void prv_header_tick_handler(struct tm* tick_time, TimeUnits units_change
 static void prv_header_create(Window *window);
 static void prv_header_update_time(AlarmMenuWindowData *data);
 static void prv_header_apply_colors(AlarmMenuWindowData *data, GColor background, GColor foreground);
+static void prv_append_repeat_suffix(char *buf, size_t size, Alarm *alarm);
 static void prv_cancel_alarm(ActionMenu* layer, const ActionMenuItem* item, void* context);
 static void prv_action_menu_close(ActionMenu* action_menu, const ActionMenuItem* item, void* context);
 static void prv_show_empty(Window *window);
@@ -252,7 +253,7 @@ static void prv_draw_row(GContext* ctx, const Layer* cell_layer, MenuIndex* cell
           char* alarm_name = alarm_get_name(alarm);
           if (!alarm_name) {
             char title[10];
-            char subtitle[20];
+            char subtitle[40];
             struct tm time_struct = *localtime(&t);
             format_time_ampm(title, sizeof(title), &time_struct);
             time_t midnight = time_start_of_today();
@@ -263,10 +264,12 @@ static void prv_draw_row(GContext* ctx, const Layer* cell_layer, MenuIndex* cell
             } else {
               strftime(subtitle, sizeof(subtitle), "%a, %b %d", &time_struct);
             }
+            prv_append_repeat_suffix(subtitle, sizeof(subtitle), alarm);
             menu_cell_basic_draw(ctx, cell_layer, title, subtitle, NULL);
           } else {
-            char subtitle[40];
+            char subtitle[56];
             format_datetime(subtitle, sizeof(subtitle), alarm_get_time(alarm));
+            prv_append_repeat_suffix(subtitle, sizeof(subtitle), alarm);
             menu_cell_basic_draw(ctx, cell_layer, alarm_name, subtitle, NULL);
           }
         }
@@ -274,6 +277,19 @@ static void prv_draw_row(GContext* ctx, const Layer* cell_layer, MenuIndex* cell
       }
       ++relevant_count;
     }
+  }
+}
+
+static void prv_append_repeat_suffix(char *buf, size_t size, Alarm *alarm) {
+  uint8_t repeat = alarm_get_repeat(alarm);
+  if (repeat == 0) {
+    return;
+  }
+  const char *label = repeat == 127 ? S(STR_REPEAT_DAILY) :
+      (repeat == 31 ? S(STR_REPEAT_WEEKDAYS) : S(STR_REPEAT_WEEKLY));
+  size_t len = strlen(buf);
+  if (len < size) {
+    snprintf(buf + len, size - len, " · %s", label);
   }
 }
 

@@ -21,6 +21,7 @@
 #include "about_window.h"
 #include "legal_window.h"
 #include "reminders_menu.h"
+#include "../converse/session_window.h"
 #include "../util/style.h"
 #include "../util/round.h"
 #include "../util/transition.h"
@@ -44,6 +45,7 @@ static void prv_push_timer_screen(int index, void* context);
 static void prv_push_about_screen(int index, void* context);
 static void prv_push_legal_screen(int index, void* context);
 static void prv_push_reminders_screen(int index, void* context);
+static void prv_push_daily_brief(int index, void* context);
 static void prv_push_ai_test(int index, void* context);
 
 typedef struct {
@@ -52,7 +54,7 @@ typedef struct {
   void (*callback)(int index, void *context);
 } MicaMenuItem;
 
-static MicaMenuItem s_items[7];
+static MicaMenuItem s_items[8];
 
 // Custom page header replacing the firmware status bar (whose time
 // text is tiny and not resizable): a 36 px time line in
@@ -84,7 +86,7 @@ void root_menu_window_push() {
 }
 
 static uint16_t prv_num_rows(MenuLayer *menu_layer, uint16_t section, void *context) {
-  return 7;
+  return ARRAY_LENGTH(s_items);
 }
 
 static int16_t prv_cell_height(MenuLayer *menu_layer, MenuIndex *index, void *context) {
@@ -120,10 +122,11 @@ static void prv_window_load(Window* window) {
     s_items[0] = (MicaMenuItem) { S(STR_ALARMS), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_ALARMS), prv_push_alarm_screen };
     s_items[1] = (MicaMenuItem) { S(STR_TIMERS), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_TIMERS), prv_push_timer_screen };
     s_items[2] = (MicaMenuItem) { S(STR_REMINDERS), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_REMINDERS), prv_push_reminders_screen };
-    s_items[3] = (MicaMenuItem) { S(STR_QUOTA), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA), prv_push_quota_screen };
-    s_items[4] = (MicaMenuItem) { S(STR_ABOUT), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_ABOUT), prv_push_about_screen };
-    s_items[5] = (MicaMenuItem) { S(STR_LEGAL), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_LEGAL), prv_push_legal_screen };
-    s_items[6] = (MicaMenuItem) { S(STR_TEST_CONNECTION), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA), prv_push_ai_test };
+    s_items[3] = (MicaMenuItem) { S(STR_DAILY_BRIEF), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_BRIEF), prv_push_daily_brief };
+    s_items[4] = (MicaMenuItem) { S(STR_QUOTA), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA), prv_push_quota_screen };
+    s_items[5] = (MicaMenuItem) { S(STR_ABOUT), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_ABOUT), prv_push_about_screen };
+    s_items[6] = (MicaMenuItem) { S(STR_LEGAL), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_LEGAL), prv_push_legal_screen };
+    s_items[7] = (MicaMenuItem) { S(STR_TEST_CONNECTION), bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA), prv_push_ai_test };
   }
 
   RootMenuWindowData* data = window_get_user_data(window);
@@ -225,6 +228,13 @@ static void prv_push_ai_test(int index, void* context) {
   }
   dict_write_uint8(iter, MESSAGE_KEY_AI_TEST_REQUEST, 1);
   app_message_outbox_send();
+}
+static void prv_push_daily_brief(int index, void* context) {
+  // Synthetic prompt, deliberately not localised: the pkjs local intent
+  // layer matches the literal 今日简报 and runs the coach brief flow
+  // (watch health snapshot -> AI session with the brief prompt), exactly
+  // as if the user had dictated it.
+  session_window_push(0, "今日简报");
 }
 static void prv_push_reminders_screen(int index, void* context) { reminders_menu_push(); }
 static void prv_push_about_screen(int index, void* context) { about_window_push(); }

@@ -41,6 +41,10 @@ static const char *const s_en[STR_COUNT] = {
   [STR_ALARM] = "Alarm!",
   [STR_NO_SUBSCRIPTION] = "Mica has no subscription. Add your AI provider API key in the Mica settings on your phone.",
   [STR_TEST_CONNECTION] = "Connection test",
+  [STR_DAILY_BRIEF] = "Daily brief",
+  [STR_REPEAT_DAILY] = "Every day",
+  [STR_REPEAT_WEEKDAYS] = "Weekdays",
+  [STR_REPEAT_WEEKLY] = "Weekly",
 };
 
 static const char *const s_zh[STR_COUNT] = {
@@ -77,6 +81,10 @@ static const char *const s_zh[STR_COUNT] = {
   [STR_ALARM] = "闹钟！",
   [STR_NO_SUBSCRIPTION] = "Mica 不收取订阅费。请在手机上的 Mica 设置中填写你的 AI Provider API Key。",
   [STR_TEST_CONNECTION] = "连接测试",
+  [STR_DAILY_BRIEF] = "今日简报",
+  [STR_REPEAT_DAILY] = "每天",
+  [STR_REPEAT_WEEKDAYS] = "工作日",
+  [STR_REPEAT_WEEKLY] = "每周",
 };
 
 void i18n_init(void) {

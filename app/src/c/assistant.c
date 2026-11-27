@@ -22,6 +22,7 @@
 #include "converse/conversation_manager.h"
 #include "image_manager/image_manager.h"
 #include "alarms/manager.h"
+#include "health/health_snapshot.h"
 #include "version/version.h"
 #include "settings/settings.h"
 
@@ -135,6 +136,7 @@ static void prv_init(void) {
   events_app_message_open();
   s_prompt_inbox_handle = events_app_message_register_inbox_received(prv_prompt_inbox_received, NULL);
   alarm_manager_init();
+  health_snapshot_init();
   i18n_init();
   fonts_load();
 }

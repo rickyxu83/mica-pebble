@@ -30,6 +30,7 @@ struct Alarm {
   WakeupId wakeup_id;
   char *name;
   bool is_timer; // what's the difference between an alarm and a timer? the user's intention.
+  uint8_t repeat_days; // weekday bitmask (bit0 = Monday .. bit6 = Sunday); 0 = one-shot
 };
 
 struct AlarmManager {
@@ -59,6 +60,13 @@ void alarm_manager_init() {
 }
 
 int alarm_manager_add_alarm(time_t when, bool is_timer, char* name, bool conversational) {
+  return alarm_manager_add_alarm_ex(when, is_timer, name, conversational, 0);
+}
+
+int alarm_manager_add_alarm_ex(time_t when, bool is_timer, char* name, bool conversational, uint8_t repeat_days) {
+  if (is_timer) {
+    repeat_days = 0; // timers never repeat
+  }
   if (s_manager.pending_alarm_count >= MAX_ALARMS) {
     BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Not scheduling alarm because MAX_ALARMS (%d) was already reached.", MAX_ALARMS);
     return E_OUT_OF_RESOURCES;
@@ -85,6 +93,7 @@ int alarm_manager_add_alarm(time_t when, bool is_timer, char* name, bool convers
   alarm->scheduled_time = when;
   alarm->is_timer = is_timer;
   alarm->wakeup_id = id;
+  alarm->repeat_days = repeat_days;
   alarm->name = NULL;
   size_t name_len = 0;
   if (name) {
@@ -197,11 +206,16 @@ static void prv_load_alarms() {
   WakeupId wakeup_ids[MAX_ALARMS];
   bool is_timers[MAX_ALARMS];
   char names[MAX_ALARMS][ALARM_NAME_SIZE];
-  
+  uint8_t repeats[MAX_ALARMS];
+  memset(repeats, 0, sizeof(repeats));
+
   persist_read_data(PERSIST_KEY_ALARM_TIMES, &times, sizeof(times));
   persist_read_data(PERSIST_KEY_ALARM_WAKEUP_IDS, &wakeup_ids, sizeof(wakeup_ids));
   persist_read_data(PERSIST_KEY_ALARM_IS_TIMERS, &is_timers, sizeof(is_timers));
   persist_read_data(PERSIST_KEY_ALARM_NAMES, &names, sizeof(names));
+  if (persist_exists(PERSIST_KEY_ALARM_REPEATS)) {
+    persist_read_data(PERSIST_KEY_ALARM_REPEATS, &repeats, sizeof(repeats));
+  }
   
   s_manager.pending_alarms = bmalloc(sizeof(Alarm) * alarm_count);
   s_manager.pending_alarm_count = alarm_count;
@@ -223,6 +237,7 @@ static void prv_load_alarms() {
     alarm->scheduled_time = times[i];
     alarm->wakeup_id = wakeup_ids[i];
     alarm->is_timer = is_timers[i];
+    alarm->repeat_days = repeats[i];
     size_t name_len = strlen(names[i]);
     if (name_len >= ALARM_NAME_SIZE) {
       name_len = ALARM_NAME_SIZE - 1;
@@ -250,6 +265,7 @@ static void prv_save_alarms() {
     persist_delete(PERSIST_KEY_ALARM_WAKEUP_IDS);
     persist_delete(PERSIST_KEY_ALARM_IS_TIMERS);
     persist_delete(PERSIST_KEY_ALARM_NAMES);
+    persist_delete(PERSIST_KEY_ALARM_REPEATS);
     persist_delete(PERSIST_KEY_ALARM_COUNT_TWO);
     wakeup_cancel_all();
   }
@@ -257,12 +273,15 @@ static void prv_save_alarms() {
   WakeupId wakeup_ids[MAX_ALARMS];
   bool is_timers[MAX_ALARMS];
   char names[MAX_ALARMS][ALARM_NAME_SIZE];
+  uint8_t repeats[MAX_ALARMS];
   memset(names, 0, sizeof(names));
+  memset(repeats, 0, sizeof(repeats));
   for (int i = 0; i < s_manager.pending_alarm_count; ++i) {
     Alarm* alarm = &s_manager.pending_alarms[i];
     times[i] = alarm->scheduled_time;
     wakeup_ids[i] = alarm->wakeup_id;
     is_timers[i] = alarm->is_timer;
+    repeats[i] = alarm->repeat_days;
     if (alarm->name) {
       strncpy(names[i], alarm->name, ALARM_NAME_SIZE);
       names[i][ALARM_NAME_SIZE - 1] = '\0';
@@ -270,12 +289,13 @@ static void prv_save_alarms() {
       names[i][0] = '\0';
     }
   }
-  
+
   persist_write_int(PERSIST_KEY_ALARM_COUNT_ONE, s_manager.pending_alarm_count);
   persist_write_data(PERSIST_KEY_ALARM_TIMES, &times, sizeof(times));
   persist_write_data(PERSIST_KEY_ALARM_WAKEUP_IDS, &wakeup_ids, sizeof(wakeup_ids));
   persist_write_data(PERSIST_KEY_ALARM_IS_TIMERS, &is_timers, sizeof(is_timers));
   persist_write_data(PERSIST_KEY_ALARM_NAMES, &names, sizeof(names));
+  persist_write_data(PERSIST_KEY_ALARM_REPEATS, &repeats, sizeof(repeats));
   persist_write_int(PERSIST_KEY_ALARM_COUNT_TWO, s_manager.pending_alarm_count);
   BOBBY_LOG(APP_LOG_LEVEL_INFO, "Wrote %d alarms.", s_manager.pending_alarm_count);
 }
@@ -330,6 +350,48 @@ static void prv_remove_alarm(int to_remove) {
   s_manager.pending_alarms = new_alarms;
 }
 
+// Weekday bit for a timestamp: bit0 = Monday .. bit6 = Sunday.
+static uint8_t prv_weekday_bit(time_t t) {
+  struct tm *local = localtime(&t);
+  return (uint8_t)(1 << ((local->tm_wday + 6) % 7));
+}
+
+// The next time a repeating alarm fires after its scheduled time: step
+// forward day by day until the time is in the future and its weekday is
+// in the repeat mask.
+static time_t prv_next_occurrence(time_t scheduled, uint8_t repeat_days, time_t now) {
+  time_t next = scheduled;
+  for (int i = 0; i < 8; ++i) {
+    next += 86400;
+    if (next > now && (repeat_days & prv_weekday_bit(next))) {
+      return next;
+    }
+  }
+  return scheduled + 86400;
+}
+
+// An alarm fired: show its window, then re-arm it in place when it
+// repeats, or drop it when it was a one-shot (the previous behaviour).
+static void prv_handle_fired(int index) {
+  Alarm *alarm = &s_manager.pending_alarms[index];
+  alarm_window_push(alarm->scheduled_time, alarm->is_timer, alarm->name);
+  if (alarm->repeat_days == 0) {
+    prv_remove_alarm(index);
+    return;
+  }
+  time_t next = prv_next_occurrence(alarm->scheduled_time, alarm->repeat_days, time(NULL));
+  WakeupId id = wakeup_schedule(next, next, true);
+  if (id < 0) {
+    BOBBY_LOG(APP_LOG_LEVEL_WARNING, "Re-arming recurring alarm failed: %d; dropping it.", (int)id);
+    prv_remove_alarm(index);
+    return;
+  }
+  alarm->scheduled_time = next;
+  alarm->wakeup_id = id;
+  prv_save_alarms();
+  BOBBY_LOG(APP_LOG_LEVEL_INFO, "Recurring alarm re-armed for %d.", (int)next);
+}
+
 bool alarm_manager_maybe_alarm() {
   if (launch_reason() != APP_LAUNCH_WAKEUP) {
     BOBBY_LOG(APP_LOG_LEVEL_DEBUG, "Not launched by APP_LAUNCH_WAKEUP");
@@ -347,8 +409,7 @@ bool alarm_manager_maybe_alarm() {
     BOBBY_LOG(APP_LOG_LEVEL_INFO, "comparing %d == %d", alarm->wakeup_id, id);
     if (alarm->wakeup_id == id) {
       BOBBY_LOG(APP_LOG_LEVEL_INFO, "alarm found! alarming...");
-      alarm_window_push(alarm->scheduled_time, alarm->is_timer, alarm->name);
-      prv_remove_alarm(i);
+      prv_handle_fired(i);
       return true;
     }
   }
@@ -365,6 +426,10 @@ bool alarm_is_timer(Alarm* alarm) {
 
 char* alarm_get_name(Alarm* alarm) {
   return alarm->name;
+}
+
+uint8_t alarm_get_repeat(Alarm* alarm) {
+  return alarm->repeat_days;
 }
 
 static void prv_handle_set_alarm_request(DictionaryIterator *iterator, void *context) {
@@ -387,7 +452,12 @@ static void prv_handle_set_alarm_request(DictionaryIterator *iterator, void *con
   if (tuple != NULL && strlen(tuple->value->cstring) > 0) {
     name = tuple->value->cstring;
   }
-  StatusCode result = alarm_manager_add_alarm(alarm_time, is_timer, name, true);
+  uint8_t repeat_days = 0;
+  tuple = dict_find(iterator, MESSAGE_KEY_SET_ALARM_REPEAT);
+  if (tuple != NULL) {
+    repeat_days = (uint8_t)tuple->value->int32;
+  }
+  StatusCode result = alarm_manager_add_alarm_ex(alarm_time, is_timer, name, true, repeat_days);
   prv_send_alarm_response(result);
   if (result == S_SUCCESS) {
     BOBBY_LOG(APP_LOG_LEVEL_INFO, "Set alarm for %d (is timer: %d)", alarm_time, is_timer);
@@ -489,8 +559,7 @@ static void prv_wakeup_handler(WakeupId wakeup_id, int32_t cookie) {
     BOBBY_LOG(APP_LOG_LEVEL_INFO, "comparing %d == %d", alarm->wakeup_id, wakeup_id);
     if (alarm->wakeup_id == wakeup_id) {
       BOBBY_LOG(APP_LOG_LEVEL_INFO, "alarm found! alarming...");
-      alarm_window_push(alarm->scheduled_time, alarm->is_timer, alarm->name);
-      prv_remove_alarm(i);
+      prv_handle_fired(i);
       break;
     }
   }

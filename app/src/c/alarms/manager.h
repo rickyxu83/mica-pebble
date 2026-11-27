@@ -24,6 +24,9 @@ typedef struct Alarm Alarm;
 
 void alarm_manager_init();
 int alarm_manager_add_alarm(time_t when, bool is_timer, char* name, bool conversational);
+// repeat_days: weekday bitmask (bit0 = Monday .. bit6 = Sunday); 0 = one-shot.
+// Recurring alarms re-arm themselves for the next matching day when they fire.
+int alarm_manager_add_alarm_ex(time_t when, bool is_timer, char* name, bool conversational, uint8_t repeat_days);
 int alarm_manager_cancel_alarm(time_t when, bool is_timer);
 int alarm_manager_get_alarm_count();
 Alarm* alarm_manager_get_alarm(int index);
@@ -32,5 +35,6 @@ bool alarm_manager_maybe_alarm();
 time_t alarm_get_time(Alarm* alarm);
 bool alarm_is_timer(Alarm* alarm);
 char* alarm_get_name(Alarm* alarm);
+uint8_t alarm_get_repeat(Alarm* alarm);
 
 #endif

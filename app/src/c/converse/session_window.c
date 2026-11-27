@@ -1052,7 +1052,14 @@ static void prv_back_clicked(ClickRecognizerRef recognizer, void *context) {
     // An explicit cancel wins over any pending auto-resume.
     sw->dictation_interrupted = false;
   }
-  if (sw && sw->dictation) {
+  // Only stop a dictation that is actually running (or mid-start). The
+  // session object is created at window load, so a prompt-launched
+  // session (menu Daily brief, sample prompts, Timeline) holds one that
+  // was never started - and dictation_session_stop() on a never-started
+  // session hard-faults in the firmware (reproduced in the emulator:
+  // App fault PC 0xeeb1c from this handler). A finished/aborted session
+  // has nothing to stop either; unload destroys the object.
+  if (sw && sw->dictation && (sw->dictation_active || sw->dictation_starting)) {
     sw->dictation_active = false;
     dictation_session_stop(sw->dictation);
   }

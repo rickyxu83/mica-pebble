@@ -180,7 +180,19 @@
       "QUIET_START",
       "QUIET_STOP",
       "QUIET_READY",
-      "DIAGNOSTICS_ENABLED"
+      "DIAGNOSTICS_ENABLED",
+      "SET_ALARM_REPEAT",
+      "HEALTH_REQUEST",
+      "HEALTH_STEPS_TODAY",
+      "HEALTH_SLEEP_MINUTES",
+      "HEALTH_SLEEP_RESTFUL_MINUTES",
+      "HEALTH_RESTING_HR",
+      "HEALTH_CURRENT_HR",
+      "HEALTH_ACTIVE_MINUTES_TODAY",
+      "HEALTH_DISTANCE_TODAY",
+      "HEALTH_WORKOUT_COUNT_7D",
+      "HEALTH_LAST_WORKOUT_AGO_MINUTES",
+      "HEALTH_LAST_WORKOUT_DURATION_MINUTES"
     ],
     "resources": {
       "media": [
@@ -519,6 +531,25 @@
         {
           "file": "icons/menu_reminders_bw.png",
           "name": "MENU_ICON_REMINDERS",
+          "type": "bitmap",
+          "memoryFormat": "1Bit",
+          "targetPlatforms": [
+            "diorite"
+          ]
+        },
+        {
+          "file": "icons/menu_brief.png",
+          "name": "MENU_ICON_BRIEF",
+          "type": "bitmap",
+          "targetPlatforms": [
+            "basalt",
+            "emery",
+            "gabbro"
+          ]
+        },
+        {
+          "file": "icons/menu_brief_bw.png",
+          "name": "MENU_ICON_BRIEF",
           "type": "bitmap",
           "memoryFormat": "1Bit",
           "targetPlatforms": [

@@ -102,6 +102,11 @@ function setAlarm(session, message, callback) {
         if (name) {
             request.SET_ALARM_NAME = name;
         }
+        // Weekday bitmask for recurring alarms (bit0 = Monday .. bit6 =
+        // Sunday); the watch ignores it for timers and one-shots.
+        if (message['repeat']) {
+            request.SET_ALARM_REPEAT = message['repeat'];
+        }
         session.enqueue(request);
     } else {
         session.enqueue({
